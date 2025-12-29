@@ -1,0 +1,726 @@
+{
+  "metadata": {
+    "total_sentences": 89,
+    "sentences_with_breakdown": 49,
+    "breakdown_types_count": 48,
+    "generated_at": "2025-12-29 17:59:03",
+    "processing_method": "Batch-based translation for context",
+    "translation_approach": "Faithful translation, neutral when context missing",
+    "breakdown_structure": "part_to_breakdown contains Japanese word/phrase, breakdown contains explanation",
+    "character_rule": "No Japanese characters in English output, romanization only in breakdowns"
+  },
+  "sentences": {
+    "1": {
+      "japanese": "太宰　治\n\n人間失格\n\nはしがき\n\n　私は、その男の写真を三葉、見たことがある。",
+      "english": "Osamu Dazai\nNo Longer Human\nPreface\nI have seen three photographs of that man.",
+      "part_to_breakdown": "人間失格",
+      "breakdown": "The title 'Ningen Shikkaku' literally means 'Disqualified as a Human' or 'Human Disqualification.' It's a central concept in Dazai's work, expressing a profound sense of alienation and failure to meet societal standards of being human.",
+      "original_batch_sentence_num": 1,
+      "batch_number": 1
+    },
+    "2": {
+      "japanese": "一葉は、その男の、幼年時代、とでも言うべきであろうか、十歳前後かと推定される頃ころの写真であって、その子供が大勢の女のひとに取りかこまれ、（それは、その子供の姉たち、妹たち、それから、従姉妹いとこたちかと想像される）庭園の池のほとりに、荒あらい縞しまの袴はかまをはいて立ち、首を三十度ほど左に傾かたむけ、醜みにくく笑っている写真である。",
+      "english": "The first photograph was of the man in what might be called his early childhood, estimated to be around ten years old. The child was surrounded by many women (likely his older sisters, younger sisters, and perhaps cousins) standing by a garden pond, wearing coarse striped hakama trousers, his head tilted about thirty degrees to the left, smiling in an ugly way.",
+      "part_to_breakdown": "袴",
+      "breakdown": "'Hakama' are traditional Japanese trousers, often pleated and worn over a kimono. They were historically worn by samurai and are still used in martial arts and formal ceremonies. Here, it indicates a specific, somewhat old-fashioned style of dress for a boy.",
+      "original_batch_sentence_num": 2,
+      "batch_number": 1
+    },
+    "3": {
+      "japanese": "醜く？",
+      "english": "Ugly?",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 3,
+      "batch_number": 1
+    },
+    "4": {
+      "japanese": "けれども、鈍にぶい人たち（つまり、美び醜しゆうなどに関心を持たぬ人たち）は、面おも白しろくも何とも無いような顔をして、\n\n「可愛かわいい坊ぼつちゃんですね。",
+      "english": "However, dull-witted people (that is, those with no interest in beauty or ugliness) might say with an expression of utter indifference, \"What a cute little boy.\"",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 4,
+      "batch_number": 1
+    },
+    "5": {
+      "japanese": "」\n\n　といい加減なお世辞を言っても、まんざら空からお世辞に聞えないくらいの、謂いわば通つう俗ぞくの「可愛らしさ」みたいな影かげもその子供の笑え顔がおに無いわけではないのだが、しかし、いささかでも、美醜に就ついての訓練を経て来たひとなら、ひとめ見てすぐ、\n\n「なんて、いやな子供だ。",
+      "english": "and offer such perfunctory flattery that it wouldn't sound entirely insincere. In other words, a trace of what might be called a commonplace 'cuteness' was not entirely absent from the child's smiling face.",
+      "part_to_breakdown": "まんざら空からお世辞に聞えない",
+      "breakdown": "'Manzara sora kara osechi ni kikoenai' is an idiomatic expression. 'Manzara' means 'entirely' or 'altogether,' often used in negative contexts. The phrase means the flattery wouldn't sound 'entirely hollow' or 'completely insincere,' suggesting there's a superficial, conventional element to the child's appearance.",
+      "original_batch_sentence_num": 5,
+      "batch_number": 1
+    },
+    "6": {
+      "japanese": "」\n\n　と頗すこぶる不快そうに呟つぶやき、毛虫でも払はらいのける時のような手つきで、その写真をほうり投げるかも知れない。",
+      "english": "But anyone with even the slightest training in matters of beauty and ugliness would likely take one look and immediately mutter with evident displeasure, \"What an unpleasant child,\" and perhaps fling the photograph away with a gesture as if brushing off a caterpillar.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 6,
+      "batch_number": 1
+    },
+    "7": {
+      "japanese": "まったく、その子供の笑顔は、よく見れば見るほど、何とも知れず、イヤな薄うす気き味み悪いものが感ぜられて来る。",
+      "english": "Truly, the more one looked at that child's smile, the more one felt an indescribably unpleasant, creepy sensation.",
+      "part_to_breakdown": "薄気味悪い",
+      "breakdown": "'Usukimiwarui' (often written as ) means 'creepy,' 'eerie,' or 'uncanny.' It describes a subtle, unsettling feeling of discomfort or dread, weaker than outright fear but distinctly unpleasant.",
+      "original_batch_sentence_num": 7,
+      "batch_number": 1
+    },
+    "8": {
+      "japanese": "どだい、それは、笑顔でない。",
+      "english": "In the first place, it wasn't a smile.",
+      "part_to_breakdown": "どだい",
+      "breakdown": "'Dodai' () literally means 'foundation' or 'base.' Here, it's used adverbially to mean 'in the first place,' 'to begin with,' or 'fundamentally,' introducing a foundational argument that undermines the previous assumption.",
+      "original_batch_sentence_num": 8,
+      "batch_number": 1
+    },
+    "9": {
+      "japanese": "この子は、少しも笑ってはいないのだ。",
+      "english": "This child was not smiling at all.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 9,
+      "batch_number": 1
+    },
+    "10": {
+      "japanese": "その証しよう拠こには、この子は、両方のこぶしを固く握にぎって立っている。",
+      "english": "As proof, the child was standing with both fists clenched tightly.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 10,
+      "batch_number": 1
+    },
+    "11": {
+      "japanese": "人間は、こぶしを固く握りながら笑えるものでは無いのである。",
+      "english": "A human cannot smile while clenching their fists tightly.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 11,
+      "batch_number": 1
+    },
+    "12": {
+      "japanese": "猿さるだ。",
+      "english": "It's a monkey.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 12,
+      "batch_number": 1
+    },
+    "13": {
+      "japanese": "猿の笑顔だ。",
+      "english": "A monkey's smile.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 13,
+      "batch_number": 1
+    },
+    "14": {
+      "japanese": "ただ、顔に醜い皺しわを寄せているだけなのである。",
+      "english": "It was merely contorting the face into ugly wrinkles.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 14,
+      "batch_number": 1
+    },
+    "15": {
+      "japanese": "「皺くちゃ坊ちゃん」とでも言いたくなるくらいの、まことに奇き妙みような、そうして、どこかけがらわしく、へんにひとをムカムカさせる表情の写真であった。",
+      "english": "It was a photograph of such a truly strange, and somehow vulgar, oddly irritating expression that one might be tempted to call him a \"wrinkled-up little boy.\"",
+      "part_to_breakdown": "けがらわしく",
+      "breakdown": "'Kegarawashii' means 'vulgar,' 'defiled,' 'unclean,' or 'contaminated.' It carries a strong moral or aesthetic connotation of something being tainted, impure, or offensive to propriety.",
+      "original_batch_sentence_num": 15,
+      "batch_number": 1
+    },
+    "16": {
+      "japanese": "私はこれまで、こんな不思議な表情の子供を見た事が、いちども無かった。",
+      "english": "I had never before seen a child with such an inexplicable expression.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 16,
+      "batch_number": 1
+    },
+    "17": {
+      "japanese": "第二葉の写真の顔は、これはまた、びっくりするくらいひどく変へん貌ぼうしていた。",
+      "english": "The face in the photograph of the second leaf was, this too, shockingly and terribly distorted.",
+      "part_to_breakdown": "変貌していた",
+      "breakdown": "The verb 'henbō suru' () means 'to transform' or 'to become distorted,' often implying a drastic, unnatural, or grotesque change in appearance or form.",
+      "original_batch_sentence_num": 1,
+      "batch_number": 2
+    },
+    "18": {
+      "japanese": "学生の姿である。",
+      "english": "It is the figure of a student.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 2,
+      "batch_number": 2
+    },
+    "19": {
+      "japanese": "高等学校時代の写真か、大学時代の写真か、はっきりしないけれども、とにかく、おそろしく美貌の学生である。",
+      "english": "It wasn't clear whether it was a photograph from high school days or university days, but in any case, it was a student of terrifying beauty.",
+      "part_to_breakdown": "おそろしく美貌",
+      "breakdown": "The phrase 'osoroshiku bibō' () uses 'osoroshiku' (terrifyingly) as an intensifier, creating a sense of overwhelming, almost unsettling beauty rather than simple attractiveness.",
+      "original_batch_sentence_num": 3,
+      "batch_number": 2
+    },
+    "20": {
+      "japanese": "しかし、これもまた、不思議にも、生きている人間の感じはしなかった。",
+      "english": "However, this too, strangely, did not give the feeling of a living human being.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 4,
+      "batch_number": 2
+    },
+    "21": {
+      "japanese": "学生服を着て、胸のポケットから白いハンケチを覗のぞかせ、籐とう椅い子すに腰こしかけて足を組み、そうして、やはり、笑っている。",
+      "english": "He was wearing a student uniform, a white handkerchief peeking from his chest pocket, sitting on a rattan chair with his legs crossed, and, again, smiling.",
+      "part_to_breakdown": "覗のぞかせ",
+      "breakdown": "The causative form 'nozokasete' () from 'nozoku' (to peek) implies a deliberate, controlled action—here, the handkerchief is arranged to be partially visible, suggesting affectation.",
+      "original_batch_sentence_num": 5,
+      "batch_number": 2
+    },
+    "22": {
+      "japanese": "こんどの笑顔は、皺くちゃの猿の笑いでなく、かなり巧たくみな微び笑しようになってはいるが、しかし、人間の笑いと、どこやら違ちがう。",
+      "english": "This smile was not the wrinkled, monkey-like laugh; it had become a rather skillful, subtle smile, but still, it differed from a human smile somewhere.",
+      "part_to_breakdown": "微び笑しよう",
+      "breakdown": "'Bishō' () is the standard word for 'smile.' The text writes it with the kanji for 'subtle' () and 'laugh' (), emphasizing a faint, controlled, or artificial smile rather than a genuine one.",
+      "original_batch_sentence_num": 6,
+      "batch_number": 2
+    },
+    "23": {
+      "japanese": "血の重さ、とでも言おうか、生命いのちの渋しぶさ、とでも言おうか、そのような充じゆう実じつ感は少しも無く、それこそ、鳥のようではなく、羽う毛もうのように軽く、ただ白紙一枚、そうして、笑っている。",
+      "english": "It lacked entirely any sense of substance—what you might call the weight of blood, or the astringency of life—and was, indeed, not like a bird, but as light as a feather, merely a single sheet of white paper, and yet, smiling.",
+      "part_to_breakdown": "生命いのちの渋しぶさ",
+      "breakdown": "'Inochi no shibusa' () is a poetic phrase. 'Shibusa' () typically refers to astringency (like in persimmons) or subdued elegance. Here, it metaphorically describes the profound, complex 'texture' or essence of life itself.",
+      "original_batch_sentence_num": 7,
+      "batch_number": 2
+    },
+    "24": {
+      "japanese": "つまり、一から十まで造り物の感じなのである。",
+      "english": "In other words, from start to finish, it gave the feeling of something artificial.",
+      "part_to_breakdown": "一から十まで",
+      "breakdown": "The idiom 'ichi kara jū made' () literally means 'from one to ten,' i.e., 'from beginning to end,' 'completely,' or 'in every aspect.'",
+      "original_batch_sentence_num": 8,
+      "batch_number": 2
+    },
+    "25": {
+      "japanese": "キザと言っても足りない。",
+      "english": "Calling it 'affected' is insufficient.",
+      "part_to_breakdown": "キザ",
+      "breakdown": "'Kiza' () is a loanword (from 'guiser' or related to 'dandy') meaning pretentious, showy, or affected in a try-hard way, often used for someone overly concerned with appearing cool or sophisticated.",
+      "original_batch_sentence_num": 9,
+      "batch_number": 2
+    },
+    "26": {
+      "japanese": "軽けい薄はくと言っても足りない。",
+      "english": "Calling it 'frivolous' is insufficient.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 10,
+      "batch_number": 2
+    },
+    "27": {
+      "japanese": "ニヤケと言っても足りない。",
+      "english": "Calling it a 'smirk' is insufficient.",
+      "part_to_breakdown": "ニヤケ",
+      "breakdown": "'Niyake' () refers to a smug, sly, or unpleasant smile—a smirk or a grin that suggests insincerity, mockery, or secret amusement.",
+      "original_batch_sentence_num": 11,
+      "batch_number": 2
+    },
+    "28": {
+      "japanese": "おしゃれと言っても、もちろん足りない。",
+      "english": "Calling it 'stylish' is, of course, insufficient.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 12,
+      "batch_number": 2
+    },
+    "29": {
+      "japanese": "しかも、よく見ていると、やはりこの美貌の学生にも、どこか怪かい談だんじみた気味悪いものが感ぜられて来るのである。",
+      "english": "Moreover, upon looking closely, one began to feel that even this beautiful student had something eerie and uncanny about him somewhere.",
+      "part_to_breakdown": "怪かい談だんじみた",
+      "breakdown": "'Kaidan-jimita' () means 'reminiscent of a ghost story' or 'uncanny.' The suffix '-jimita' () indicates 'taking on the quality of' or 'becoming like,' often something negative or unusual.",
+      "original_batch_sentence_num": 13,
+      "batch_number": 2
+    },
+    "30": {
+      "japanese": "私はこれまで、こんな不思議な美貌の青年を見た事が、いちども無かった。",
+      "english": "I had never before seen such a mysteriously beautiful young man.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 14,
+      "batch_number": 2
+    },
+    "31": {
+      "japanese": "もう一葉の写真は、最も奇怪なものである。",
+      "english": "The other photograph is the most bizarre one.",
+      "part_to_breakdown": "奇怪な",
+      "breakdown": "The term 'kikai na' means 'strange,' 'bizarre,' or 'grotesque.' It often carries a stronger, more unsettling nuance than the common 'hen na' (weird).",
+      "original_batch_sentence_num": 1,
+      "batch_number": 3
+    },
+    "32": {
+      "japanese": "まるでもう、としの頃がわからない。",
+      "english": "It's as if one cannot tell his age at all.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 2,
+      "batch_number": 3
+    },
+    "33": {
+      "japanese": "頭はいくぶん白髪しらがのようである。",
+      "english": "His hair is somewhat like white hair.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 3,
+      "batch_number": 3
+    },
+    "34": {
+      "japanese": "それが、ひどく汚きたない部屋（部屋の壁かべが三箇か所しよほど崩くずれ落ちているのが、その写真にハッキリ写っている）の片かた隅すみで、小さい火ひ鉢ばちに両手をかざし、こんどは笑っていない。",
+      "english": "In it, he is in a corner of a terribly dirty room (the photograph clearly shows the walls of the room crumbling in three places), holding his hands over a small brazier, and this time he is not smiling.",
+      "part_to_breakdown": "火鉢",
+      "breakdown": "A 'hibachi' is a traditional Japanese charcoal brazier used for heating and sometimes cooking. It's a cultural object often associated with domestic, pre-modern interiors.",
+      "original_batch_sentence_num": 4,
+      "batch_number": 3
+    },
+    "35": {
+      "japanese": "どんな表情も無い。",
+      "english": "There is no expression whatsoever.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 5,
+      "batch_number": 3
+    },
+    "36": {
+      "japanese": "謂わば、坐すわって火鉢に両手をかざしながら、自然に死んでいるような、まことにいまわしい、不ふ吉きつなにおいのする写真であった。",
+      "english": "So to speak, it was a truly ominous, inauspicious-smelling photograph, as if he were sitting with his hands held over the brazier and had died naturally.",
+      "part_to_breakdown": "いまわしい",
+      "breakdown": "The term 'imawashii' means 'ominous,' 'sinister,' or 'ill-omened.' It describes something that feels foreboding or portends misfortune, often with a sense of repulsion.",
+      "original_batch_sentence_num": 6,
+      "batch_number": 3
+    },
+    "37": {
+      "japanese": "奇怪なのは、それだけでない。",
+      "english": "The strangeness does not end there.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 7,
+      "batch_number": 3
+    },
+    "38": {
+      "japanese": "その写真には、わりに顔が大きく写っていたので、私は、つくづくその顔の構造を調べる事が出来たのであるが、額は平へい凡ぼん、額の皺も平凡、眉まゆも平凡、眼めも平凡、鼻も口も顎あごも、ああ、この顔には表情が無いばかりか、印象さえ無い。",
+      "english": "In that photograph, his face was captured relatively large, so I was able to thoroughly examine the structure of that face, but the forehead was ordinary, the forehead's wrinkles ordinary, the eyebrows ordinary, the eyes ordinary, the nose, mouth, and chin—ah, not only does this face lack expression, it lacks even an impression.",
+      "part_to_breakdown": "つくづく",
+      "breakdown": "The adverb 'tsukuzuku' means 'thoroughly,' 'deeply,' or 'intently.' It implies a focused, often contemplative or exhaustive examination of something.",
+      "original_batch_sentence_num": 8,
+      "batch_number": 3
+    },
+    "39": {
+      "japanese": "特とく徴ちようが無いのだ。",
+      "english": "It has no distinguishing features.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 9,
+      "batch_number": 3
+    },
+    "40": {
+      "japanese": "たとえば、私がこの写真を見て、眼をつぶる。",
+      "english": "For example, I look at this photograph and close my eyes.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 10,
+      "batch_number": 3
+    },
+    "41": {
+      "japanese": "既すでに私はこの顔を忘れている。",
+      "english": "I have already forgotten this face.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 11,
+      "batch_number": 3
+    },
+    "42": {
+      "japanese": "部屋の壁や、小さい火鉢は思い出す事が出来るけれども、その部屋の主人公の顔の印象は、すっと霧む消しようして、どうしても、何としても思い出せない。",
+      "english": "I can recall the room's walls and the small brazier, but the impression of the face of that room's protagonist vanishes like mist, and I simply cannot, no matter what, recall it.",
+      "part_to_breakdown": "霧消しようして",
+      "breakdown": "The verb 'mushousuru' () means 'to vanish like mist' or 'to disappear completely without a trace.' It's a literary metaphor for something evaporating or dissipating utterly.",
+      "original_batch_sentence_num": 12,
+      "batch_number": 3
+    },
+    "43": {
+      "japanese": "画えにならない顔である。",
+      "english": "It is a face that cannot be painted.",
+      "part_to_breakdown": "画にならない",
+      "breakdown": "The phrase 'e ni naranai' literally means 'does not become a picture.' It's an idiom describing something so lacking in distinctive features, interest, or artistic merit that it is impossible or pointless to depict.",
+      "original_batch_sentence_num": 13,
+      "batch_number": 3
+    },
+    "44": {
+      "japanese": "漫まん画がにも何もならない顔である。",
+      "english": "It is a face that cannot even be made into a caricature.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 14,
+      "batch_number": 3
+    },
+    "45": {
+      "japanese": "眼をひらく。",
+      "english": "I open my eyes.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 15,
+      "batch_number": 3
+    },
+    "46": {
+      "japanese": "あ、こんな顔だったのか、思い出した、というようなよろこびさえ無い。",
+      "english": "There is not even the joy of thinking, 'Ah, so this is what the face looked like, I remember now.'",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 16,
+      "batch_number": 3
+    },
+    "47": {
+      "japanese": "極きよく端たんな言い方をすれば、眼をひらいてその写真を再び見ても、思い出せない。",
+      "english": "To put it in the most extreme terms, even if I open my eyes and look at the photograph again, I cannot remember it.",
+      "part_to_breakdown": "極端な言い方をすれば",
+      "breakdown": "The phrase 'kyokutan na iikata o sureba' means 'to put it in extreme terms' or 'to state it in the strongest possible way.' It's used to introduce a hyperbolic or maximalist description to emphasize a point.",
+      "original_batch_sentence_num": 17,
+      "batch_number": 3
+    },
+    "48": {
+      "japanese": "そうして、ただもう不ふ愉ゆ快かい、イライラして、つい眼をそむけたくなる。",
+      "english": "And then, I just feel unpleasant, irritated, and end up wanting to avert my eyes.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 18,
+      "batch_number": 3
+    },
+    "49": {
+      "japanese": "所謂いわゆる「死相」というものにだって、もっと何か表情なり印象なりがあるものだろうに、人間のからだに駄だ馬ばの首でもくっつけたなら、こんな感じのものになるであろうか、とにかく、どこという事なく、見る者をして、ぞっとさせ、いやな気持にさせるのだ。",
+      "english": "Even in what is called a 'death mask,' there should be some kind of expression or impression, I would think; if one attached a horse's head to a human body, would it produce this kind of feeling? In any case, for no particular reason, it makes the viewer shudder and feel disgusted.",
+      "part_to_breakdown": "死相",
+      "breakdown": "The term 'shisou' refers to the appearance of a face at or just after death—a 'death mask' or 'deathly pallor.' It's a specific concept relating to the visual signs of mortality.",
+      "original_batch_sentence_num": 19,
+      "batch_number": 3
+    },
+    "50": {
+      "japanese": "私はこれまで、こんな不思議な男の顔を見た事が、やはり、いちども無かった。",
+      "english": "Until now, I had likewise never once seen such a mysterious man's face.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 20,
+      "batch_number": 3
+    },
+    "51": {
+      "japanese": "第一の手記\n\n　恥はじの多い生しよう涯がいを送って来ました。",
+      "english": "First Notebook\n\nI have led a life filled with shame.",
+      "part_to_breakdown": "手記",
+      "breakdown": "The term 'teki' means a 'memoir,' 'note,' or 'written record.' In literary contexts, it often refers to a first-person account or confessional narrative, as seen here.",
+      "original_batch_sentence_num": 21,
+      "batch_number": 3
+    },
+    "52": {
+      "japanese": "自分には、人間の生活というものが、見当つかないのです。",
+      "english": "For myself, I cannot make heads or tails of what constitutes human life.",
+      "part_to_breakdown": "見当つかない",
+      "breakdown": "Literally 'cannot get a bearing/fix on something.' It means to have no idea, to be completely at a loss, or to be unable to understand or figure something out.",
+      "original_batch_sentence_num": 1,
+      "batch_number": 4
+    },
+    "53": {
+      "japanese": "自分は東北の田舎いなかに生れましたので、汽車をはじめて見たのは、よほど大きくなってからでした。",
+      "english": "I was born in the countryside of the Tohoku region, so I didn't see a train for the first time until I was quite grown up.",
+      "part_to_breakdown": "よほど",
+      "breakdown": "An adverb meaning 'considerably,' 'quite,' or 'very much.' It emphasizes a high degree or a significant amount, often implying 'more than usual' or 'to a notable extent.'",
+      "original_batch_sentence_num": 2,
+      "batch_number": 4
+    },
+    "54": {
+      "japanese": "自分は停車場のブリッジを、上って、降りて、そうしてそれが線路をまたぎ越こえるために造られたものだという事には全然気づかず、ただそれは停車場の構内を外国の遊ゆう戯ぎ場じようみたいに、複雑に楽しく、ハイカラにするためにのみ、設備せられてあるものだとばかり思っていました。",
+      "english": "I would go up and down the station bridge, and I was completely unaware that it was built to cross over the railway tracks; I thought it was installed solely to make the station grounds, like a foreign amusement park, complex, fun, and stylish.",
+      "part_to_breakdown": "ハイカラ",
+      "breakdown": "A Meiji-era term derived from 'high collar,' referring to the fashionable, Western-style high-collared shirts. It came to mean anything modern, stylish, sophisticated, or Western-influenced.",
+      "original_batch_sentence_num": 3,
+      "batch_number": 4
+    },
+    "55": {
+      "japanese": "しかも、かなり永ながい間そう思っていたのです。",
+      "english": "Moreover, I thought that for quite a long time.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 4,
+      "batch_number": 4
+    },
+    "56": {
+      "japanese": "ブリッジの上ったり降りたりは、自分にはむしろ、ずいぶん垢あか抜ぬけのした遊戯で、それは鉄道のサーヴィスの中でも、最も気のきいたサーヴィスの一つだと思っていたのですが、のちにそれはただ旅客が線路をまたぎ越えるための頗る実利的な階段に過ぎないのを発見して、にわかに興が覚めました。",
+      "english": "Going up and down the bridge was, for me, rather a very sophisticated game, and I thought it was one of the most clever services within the railway's offerings; but later, when I discovered it was merely a very practical staircase for passengers to cross the tracks, my interest suddenly vanished.",
+      "part_to_breakdown": "垢抜けのした",
+      "breakdown": "Literally 'having had the grime removed.' It describes something or someone that is refined, sophisticated, polished, or free from provincialism or vulgarity.",
+      "original_batch_sentence_num": 5,
+      "batch_number": 4
+    },
+    "57": {
+      "japanese": "また、自分は子供の頃、絵本で地下鉄道というものを見て、これもやはり、実利的な必要から案出せられたものではなく、地上の車に乗るよりは、地下の車に乗ったほうが風ふうがわりで面白い遊びだから、とばかり思っていました。",
+      "english": "Also, when I was a child, I saw a subway in a picture book and thought, again, that it too was not devised out of practical necessity, but that it was just a novel and interesting game because riding in an underground car was more unusual than riding in one above ground.",
+      "part_to_breakdown": "風がわり",
+      "breakdown": "A compound of 'wind' and 'change/different.' It describes something unconventional, novel, out of the ordinary, or having a unique, interesting flavor.",
+      "original_batch_sentence_num": 6,
+      "batch_number": 4
+    },
+    "58": {
+      "japanese": "自分は子供の頃から病弱で、よく寝ね込こみましたが、寝ながら、敷しき布ふ、枕まくらのカヴァ、掛かけ蒲ぶ団とんのカヴァを、つくづく、つまらない装そう飾しよくだと思い、それが案外に実用品だった事を、二十歳ちかくになってわかって、人間のつましさに暗然とし、悲しい思いをしました。",
+      "english": "I was sickly from childhood and often took to my bed, and while lying there, I would think deeply that the sheets, pillowcases, and quilt covers were such pointless decorations, and when I realized, near the age of twenty, that they were unexpectedly practical items, I was struck by the shabbiness of human life and felt sad.",
+      "part_to_breakdown": "暗然とする",
+      "breakdown": "An expression meaning to become gloomy, dejected, or downcast. It describes a state of feeling dispirited, often with a sense of resignation or melancholy.",
+      "original_batch_sentence_num": 7,
+      "batch_number": 4
+    },
+    "59": {
+      "japanese": "また、自分は、空腹という事を知りませんでした。",
+      "english": "Also, I did not know hunger.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 8,
+      "batch_number": 4
+    },
+    "60": {
+      "japanese": "いや、それは、自分が衣食住に困らない家に育ったという意味ではなく、そんな馬ば鹿かな意味ではなく、自分には「空腹」という感覚はどんなものだか、さっぱりわからなかったのです。",
+      "english": "No, that is not to say I was raised in a house without worries over food, clothing, or shelter—not in such a foolish sense—but that I had absolutely no idea what the sensation of 'hunger' was like.",
+      "part_to_breakdown": "さっぱり",
+      "breakdown": "An adverb meaning 'completely,' 'totally,' or 'not at all' when used with a negative verb. It emphasizes a complete lack or absence of something.",
+      "original_batch_sentence_num": 9,
+      "batch_number": 4
+    },
+    "61": {
+      "japanese": "へんな言いかたですが、おなかが空すいていても、自分でそれに気がつかないのです。",
+      "english": "It's a strange way to put it, but even when my stomach was empty, I myself didn't notice it.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 10,
+      "batch_number": 4
+    },
+    "62": {
+      "japanese": "小学校、中学校、自分が学校から帰って来ると、周囲の人たちが、それ、おなかが空すいたろう、自分たちにも覚えがある、学校から帰って来た時の空腹は全くひどいからな、甘あま納なつ豆とうはどう？",
+      "english": "In elementary and middle school, when I came home, the people around me would make a fuss, saying, 'There, you must be hungry, we remember it too, the hunger when you come home from school is really terrible, how about some sweet boiled beans? We have castella and bread too,' and so on.",
+      "part_to_breakdown": "甘納豆",
+      "breakdown": "A traditional Japanese sweet made of beans (often adzuki or kidney beans) simmered in sugar syrup until they become soft, sweet, and glossy. It's a classic snack or dessert.",
+      "original_batch_sentence_num": 11,
+      "batch_number": 4
+    },
+    "63": {
+      "japanese": "カステラも、パンもあるよ、などと言って騒さわぎますので、自分は持ち前のおべっか精神を発揮して、おなかが空すいた、と呟いて、甘納豆を十粒つぶばかり口にほうり込むのですが、空腹感とは、どんなものだか、ちっともわかっていやしなかったのです。",
+      "english": "So, exercising my innate sycophantic spirit, I would mutter that I was hungry and toss about ten beans into my mouth, but I hadn't the slightest idea what the feeling of hunger actually was.",
+      "part_to_breakdown": "おべっか",
+      "breakdown": "A colloquial term for flattery, sycophancy, or insincere praise. It implies saying agreeable things to curry favor, often with a slightly negative connotation of being obsequious.",
+      "original_batch_sentence_num": 12,
+      "batch_number": 4
+    },
+    "64": {
+      "japanese": "自分だって、それは勿もち論ろん、大いにものを食べますが、しかし、空腹感から、ものを食べた記き憶おくは、ほとんどありません。",
+      "english": "I myself, of course, eat a great deal, but I have almost no memory of eating out of hunger.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 1,
+      "batch_number": 5
+    },
+    "65": {
+      "japanese": "めずらしいと思われたものを食べます。",
+      "english": "I eat things that are considered rare.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 2,
+      "batch_number": 5
+    },
+    "66": {
+      "japanese": "豪ごう華かと思われたものを食べます。",
+      "english": "I eat things that are considered luxurious.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 3,
+      "batch_number": 5
+    },
+    "67": {
+      "japanese": "また、よそへ行って出されたものも、無理をしてまで、たいてい食べます。",
+      "english": "Also, when I go somewhere else and am served food, I usually eat it even if I have to force myself.",
+      "part_to_breakdown": "無理をしてまで",
+      "breakdown": "This phrase means 'even if it means forcing oneself' or 'going so far as to strain oneself.' The particle 'made' () emphasizes the extremity of the action ('even to the point of').",
+      "original_batch_sentence_num": 4,
+      "batch_number": 5
+    },
+    "68": {
+      "japanese": "そうして、子供の頃の自分にとって、最も苦痛な時刻は、実に、自分の家の食事の時間でした。",
+      "english": "And so, for me as a child, the most painful time was, in truth, the mealtime at my own house.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 5,
+      "batch_number": 5
+    },
+    "69": {
+      "japanese": "自分の田舎の家では、十人くらいの家族全部、めいめいのお膳ぜんを二列に向い合せに並べて、末っ子の自分は、もちろん一ばん下の座でしたが、その食事の部屋は薄暗く、昼ごはんの時など、十幾いく人にんの家族が、ただ黙もく々もくとしてめしを食っている有様には、自分はいつも肌はだ寒ざむい思いをしました。",
+      "english": "In my country home, the entire family of about ten people would line up their individual trays in two rows facing each other, and I, the youngest child, was of course in the lowest seat, but that dining room was dim, and at lunchtime, for instance, the sight of the dozen or so family members eating their rice in utter silence always made me feel a chill down my spine.",
+      "part_to_breakdown": "肌寒い思いをしました",
+      "breakdown": "Literally 'had a skin-cold feeling.' It describes a creeping chill or shudder of discomfort, often from fear, unease, or a sinister atmosphere, not just physical cold.",
+      "original_batch_sentence_num": 6,
+      "batch_number": 5
+    },
+    "70": {
+      "japanese": "それに田舎の昔むかし気質かたぎの家でしたので、おかずも、たいていきまっていて、めずらしいもの、豪華なもの、そんなものは望むべくもなかったので、いよいよ自分は食事の時刻を恐きよう怖ふしました。",
+      "english": "Moreover, as it was a house with old-fashioned country ways, the side dishes were mostly fixed, and rare or luxurious things were utterly out of the question, so all the more I came to dread mealtimes.",
+      "part_to_breakdown": "望むべくもなかった",
+      "breakdown": "This is a classical/literary negative potential form meaning 'could not possibly be hoped for' or 'was utterly unattainable.' '~beku mo nai' expresses something is impossible or unthinkable.",
+      "original_batch_sentence_num": 7,
+      "batch_number": 5
+    },
+    "71": {
+      "japanese": "自分はその薄暗い部屋の末席に、寒さにがたがた震ふるえる思いで口にごはんを少量ずつ運び、押し込み、人間は、どうして一日に三度三度ごはんを食べるのだろう、実にみな厳げん粛しゆくな顔をして食べている、これも一種の儀ぎ式しきのようなもので、家族が日に三度三度、時刻をきめて薄暗い一部屋に集り、お膳を順序正しく並べ、食べたくなくても無言でごはんを嚙かみながら、うつむき、家中にうごめいている霊れいたちに祈いのるためのものかもしれない、とさえ考えた事があるくらいでした。",
+      "english": "Sitting in the lowest seat of that dim room, feeling as if I were shivering from the cold, I would carry small amounts of rice to my mouth, force it in, and even thought: Why must humans eat three times a day? They all eat with such solemn faces—this too is like a kind of ritual. Perhaps the family gathers three times a day at set times in a dim room, lines up the trays in proper order, and, even if they don't want to eat, chew their rice in silence with bowed heads, all to pray to the spirits seething throughout the house.",
+      "part_to_breakdown": "霊たち",
+      "breakdown": "'Tachi' is a pluralizing suffix often attached to people or animate beings. Here, 'rei-tachi' (spirits) personifies the spirits, giving them a collective, almost living presence, which adds to the eerie, animistic atmosphere of the passage.",
+      "original_batch_sentence_num": 8,
+      "batch_number": 5
+    },
+    "72": {
+      "japanese": "めしを食べなければ死ぬ、という言葉は、自分の耳には、ただイヤなおどかしとしか聞えませんでした。",
+      "english": "The saying 'If you don't eat, you'll die' sounded to my ears like nothing but an unpleasant threat.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 9,
+      "batch_number": 5
+    },
+    "73": {
+      "japanese": "その迷めい信しんは、（いまでも自分には、何だか迷信のように思われてならないのですが）しかし、いつも自分に不安と恐怖を与あたえました。",
+      "english": "That superstition (even now, I can't help but think of it as a kind of superstition) always gave me anxiety and terror.",
+      "part_to_breakdown": "思われてならない",
+      "breakdown": "This expression means 'cannot help but think' or 'is irresistibly felt.' The '~te naranai' pattern indicates an uncontrollable state or feeling that wells up within the speaker.",
+      "original_batch_sentence_num": 10,
+      "batch_number": 5
+    },
+    "74": {
+      "japanese": "人間は、めしを食べなければ死ぬから、そのために働いて、めしを食べなければならぬ、という言葉ほど自分にとって難解で晦かい渋じゆうで、そうして脅きよう迫はくめいた響ひびきを感じさせる言葉は、無かったのです。",
+      "english": "No words felt more difficult to understand, more obscure and abstruse, and yet more menacing in their resonance to me than the saying: 'Humans must work to eat because if they don't eat, they'll die.'",
+      "part_to_breakdown": "晦渋",
+      "breakdown": "Read as 'kaijuu,' this literary term means 'obscure,' 'abstruse,' or 'unintelligible.' It describes something difficult to decipher or understand, often due to excessive complexity or esoteric nature.",
+      "original_batch_sentence_num": 11,
+      "batch_number": 5
+    },
+    "75": {
+      "japanese": "つまり自分には、人間の営みというものが未いまだに何もわかっていない、という事になりそうです。",
+      "english": "In other words, it seems to come down to this: I still understand nothing at all about human endeavors.",
+      "part_to_breakdown": "未いまだに",
+      "breakdown": "This is an emphatic form of 'imada ni' (still, yet). The repetition of the kanji  (not yet) and the hiragana  intensifies the meaning, emphasizing a prolonged state of 'not yet' understanding.",
+      "original_batch_sentence_num": 1,
+      "batch_number": 6
+    },
+    "76": {
+      "japanese": "自分の幸福の観念と、世のすべての人たちの幸福の観念とが、まるで食いちがっているような不安、自分はその不安のために夜々、転てん輾てんし、呻しん吟ぎんし、発はつ狂きようしかけた事さえあります。",
+      "english": "An anxiety that my notion of happiness and the notion of happiness of all the people in the world seem to be completely at odds—because of that anxiety, I have even come close to going mad, tossing and turning night after night, groaning.",
+      "part_to_breakdown": "転てん輾てんし、呻しん吟ぎんし",
+      "breakdown": "These are ateji (phonetic kanji) for the words 'tenten' (tossing and turning) and 'shingin' (groaning, moaning). The kanji are chosen for their sound, not their meaning, creating a vivid, literary description of restless suffering.",
+      "original_batch_sentence_num": 2,
+      "batch_number": 6
+    },
+    "77": {
+      "japanese": "自分は、いったい幸福なのでしょうか。",
+      "english": "Am I, in fact, happy?",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 3,
+      "batch_number": 6
+    },
+    "78": {
+      "japanese": "自分は小さい時から、実にしばしば、仕合せ者だと人に言われて来ましたが、自分ではいつも地じ獄ごくの思いで、かえって、自分を仕合せ者だと言ったひとたちのほうが、比ひ較かくにも何もならぬくらいずっとずっと安楽なように自分には見えるのです。",
+      "english": "Since I was small, I have very often been told by people that I am fortunate, but I myself have always felt as if in hell; on the contrary, the people who called me fortunate seem to me to be far, far more at ease—to a degree beyond any comparison.",
+      "part_to_breakdown": "仕合せ者",
+      "breakdown": "An older, literary spelling of 'shiawase-sha' (a fortunate/happy person). The use of the kanji  instead of the modern  gives the term a slightly archaic, formal, or introspective tone.",
+      "original_batch_sentence_num": 4,
+      "batch_number": 6
+    },
+    "79": {
+      "japanese": "自分には、禍わざわいのかたまりが十個あって、その中の一個でも、隣りん人じんが脊せ負おったら、その一個だけでも充じゆう分ぶんに隣人の生命いのち取りになるのではあるまいかと、思った事さえありました。",
+      "english": "I have even thought: I have ten lumps of misfortune; if a neighbor were to shoulder even one of them, wouldn't that one lump alone be quite enough to take the neighbor's life?",
+      "part_to_breakdown": "脊せ負おったら",
+      "breakdown": "This is the verb 'seou' (to carry on one's back, to shoulder a burden) written with ateji. The kanji  (spine) is used phonetically for 'se,' emphasizing the physical and metaphorical weight of the burden.",
+      "original_batch_sentence_num": 5,
+      "batch_number": 6
+    },
+    "80": {
+      "japanese": "つまり、わからないのです。",
+      "english": "In short, I don't understand.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 6,
+      "batch_number": 6
+    },
+    "81": {
+      "japanese": "隣人の苦しみの性質、程度が、まるで見当つかないのです。",
+      "english": "I have absolutely no idea of the nature or degree of my neighbor's suffering.",
+      "part_to_breakdown": "見当つかない",
+      "breakdown": "'Miattsukanai' means 'to have no idea, to be unable to guess or estimate.' It conveys a complete lack of reference points or clues to make a judgment.",
+      "original_batch_sentence_num": 7,
+      "batch_number": 6
+    },
+    "82": {
+      "japanese": "プラクテカル な苦しみ、ただ、めしを食えたらそれで解決できる苦しみ、しかし、それこそ最も強い痛苦で、自分の例の十個の禍いなど、吹ふっ飛んでしまう程ほどの、凄せい惨さんな阿あ鼻び地獄 なのかも知れない、それは、わからない、しかし、それにしては、よく自殺もせず、発狂もせず、政党を論じ、絶望せず、屈くつせず生活のたたかいを続けて行ける、苦しくないんじゃないか？",
+      "english": "Practical suffering—suffering that could be resolved simply by being able to eat—but perhaps that is the most intense agony, a hellish misery so fierce it could blow away my usual ten lumps of misfortune; I don't know. But if that's the case, how is it they don't kill themselves or go mad, how can they discuss politics, not despair, not yield, and continue the struggle of life? Aren't they actually not suffering?",
+      "part_to_breakdown": "阿あ鼻び地獄",
+      "breakdown": "'Abi Jigoku' refers to Avīci, the lowest and most terrible of the Buddhist hells, reserved for the worst sinners. It signifies extreme, relentless, and inescapable torment.",
+      "original_batch_sentence_num": 8,
+      "batch_number": 6
+    },
+    "83": {
+      "japanese": "エゴイストになりきって、しかもそれを当然の事と確信し、いちども自分を疑った事が無いんじゃないか？",
+      "english": "Haven't they become perfect egoists, convinced it's only natural, and never once doubted themselves?",
+      "part_to_breakdown": "なりきって",
+      "breakdown": "'Narikitte' comes from 'narikiru,' meaning 'to become completely/to perfect/to fully embody.' It implies a total, unwavering transformation into a state—here, a complete egoist.",
+      "original_batch_sentence_num": 9,
+      "batch_number": 6
+    },
+    "84": {
+      "japanese": "それなら、楽だ、しかし、人間というものは、皆みなそんなもので、またそれで満点なのではないかしら、わからない、……夜はぐっすり眠ねむり、朝は爽そう快かいなのかしら、どんな夢を見ているのだろう、道を歩きながら何を考えているのだろう、金？",
+      "english": "That would be easy. But perhaps all human beings are like that, and perhaps that's actually perfect? I don't know... Do they sleep soundly at night and wake up refreshed? What dreams do they have? What do they think about while walking down the street? Money?",
+      "part_to_breakdown": "満点",
+      "breakdown": "'Manten' literally means 'perfect score' (100 points). Here, it's used metaphorically to mean 'ideal,' 'perfect,' or 'the best one can be.'",
+      "original_batch_sentence_num": 10,
+      "batch_number": 6
+    },
+    "85": {
+      "japanese": "まさか、それだけでも無いだろう、人間は、めしを食うために生きているのだ、という説は聞いた事があるような気がするけれども、金のために生きている、という言葉は、耳にした事が無い、いや、しかし、ことに依よると、……いや、それもわからない、……考えれば考えるほど、自分には、わからなくなり、自分ひとり全く変っているような、不安と恐怖に襲おそわれるばかりなのです。",
+      "english": "Surely it can't be just that. I have a feeling I've heard the theory that humans live to eat, but I've never heard the phrase 'live for money.' No, but depending on the case... no, I don't understand that either... The more I think, the less I understand, and I am assailed only by anxiety and terror, as if I alone am completely different.",
+      "part_to_breakdown": "ことに依よると",
+      "breakdown": "'Koto ni yoru to' is a phrase meaning 'depending on the circumstances/case/person.' It shows the narrator considering a situational exception to his previous thought.",
+      "original_batch_sentence_num": 11,
+      "batch_number": 6
+    },
+    "86": {
+      "japanese": "自分は隣人と、ほとんど会話が出来ません。",
+      "english": "I can hardly hold a conversation with my neighbors.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 12,
+      "batch_number": 6
+    },
+    "87": {
+      "japanese": "何を、どう言ったらいいのか、わからないのです。",
+      "english": "I don't know what to say, or how to say it.",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 13,
+      "batch_number": 6
+    },
+    "88": {
+      "japanese": "そこで考え出したのは、道化でした。",
+      "english": "What I hit upon then was clowning.",
+      "part_to_breakdown": "道化",
+      "breakdown": "'Dōke' means a clown, jester, or buffoon. It refers to adopting a foolish or comical persona as a social strategy, a central theme in the narrator's life.",
+      "original_batch_sentence_num": 14,
+      "batch_number": 6
+    },
+    "89": {
+      "japanese": "---",
+      "english": "---",
+      "part_to_breakdown": "",
+      "breakdown": "",
+      "original_batch_sentence_num": 15,
+      "batch_number": 6
+    }
+  }
+}
