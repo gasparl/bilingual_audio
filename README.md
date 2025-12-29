@@ -27,3 +27,18 @@ The pipeline: split the raw text into manageable chunks → translate (and optio
 - Uses Balabolka `bal4web.exe` with Microsoft voices; auto-detects working JA male/female voices and an EN voice (if available).
 - Generates multiple WAVs per sentence (where possible): sentence number (JP), Japanese sentence (male), English translation, combined breakdown audio (JP term + EN note), and an alternating JP female→male version.
 - Retries transient TTS failures and rejects empty/tiny WAVs.
+
+## Example files included
+
+- `jp.txt` — example input Japanese text
+- `divided_output.txt` — example output from `divide.py`
+- `translated_output.json` — example output from `deepseek_breakdown.py`
+
+## Notes
+
+- This repo is not actively maintained.
+- Upload the scripts to an AI assistant if you want a deeper, line-by-line explanation.
+
+## License
+
+GPL.
