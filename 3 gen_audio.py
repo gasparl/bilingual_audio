@@ -5,10 +5,10 @@ import re
 import time
 import sys
 import random
-import datetime
 import wave
 from pydub import AudioSegment
 from typing import Dict, List, Optional, Tuple
+
 
 # ---------- CONFIG ----------
 BAL4WEB = r"C:\Program Files (x86)\Balabolka\bal4web\bal4web.exe"
@@ -16,18 +16,32 @@ INPUT_JSON = "translated_output.json"
 LANG_CODE_JA = "ja-JP"
 LANG_CODE_EN = "en-US"
 
-# Retry behavior (minimal, robust)
+# Audio processing settings
+PAUSE_IN_BREAKDOWN_MS = 500      # pause between Japanese term and English breakdown in part 4
+PAUSE_IN_ALTERNATING_MS = 800    # pause between female and male voices in part 5
+PAUSE_END_SILENCE_MS = 800       # Silence appended to end of ALL final segment files (parts 1-5)
+
+# Japanese speech rates for different segments
+JA_SPEECH_RATE_SENTENCE_NUMBER = 0.95
+JA_SPEECH_RATE_JAPANESE_MALE = 0.75
+JA_SPEECH_RATE_ALTERNATING = 0.90
+
+FORCE_SAMPLE_RATE_KHZ = 24       # Output sample rate (24kHz) for WAV consistency
+
+# Robustness settings
 MAX_RETRIES = 5
-RETRY_BASE_SLEEP = 0.7      # seconds
-RETRY_JITTER = 0.4          # seconds
-MIN_WAV_BYTES = 120         # quick sanity threshold
+RETRY_BASE_SLEEP = 0.7
+RETRY_JITTER = 0.4
+MIN_WAV_BYTES = 120
+FALLBACK_TARGET_SAMPLE_RATE_HZ = 24000
+FALLBACK_TARGET_CHANNELS = 1
+FALLBACK_TARGET_SAMPLE_WIDTH_BYTES = 2
 
 # Voice configurations
 JAPANESE_VOICES = {
     "male": {"candidates": ["Keita", "ja-JP-KeitaNeural"]},
     "female": {"candidates": ["Nanami", "ja-JP-NanamiNeural"]}
 }
-
 ENGLISH_VOICES = ["Steffan", "en-US-GuyNeural", "Andrew2", "Brian"]
 
 # ---------- PATHS ----------
@@ -35,61 +49,124 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent
 AUDIO_OUTPUT_DIR = BASE_DIR / "audio_sentences"
 INPUT_JSON_PATH = BASE_DIR / INPUT_JSON
 
-# ---------- TEXT CLEANING ----------
+
 def clean_text(text: str) -> str:
-    """Clean text for TTS - essential cleaning only."""
-    if not text:
-        return ""
-    text = re.sub(r"\n+", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    """Clean text for TTS."""
+    return re.sub(r"\s+", " ", re.sub(r"\n+", " ", text)).strip() if text else ""
+
 
 def file_has_audio(p: pathlib.Path) -> bool:
     return p.exists() and p.is_file() and p.stat().st_size > MIN_WAV_BYTES
 
-# ---------- WAV TO MP3 CONVERSION ----------
-def convert_sentence_wavs_to_mp3(sentence_id: str, audio_dir: pathlib.Path):
-    """Convert all WAV files for a specific sentence to MP3."""
-    
-    # Find all WAV files for this sentence
-    wav_files = list(audio_dir.glob(f"sentence_{sentence_id}_*.wav"))
-    
-    for wav_file in wav_files:
-        try:
-            mp3_file = wav_file.with_suffix('.mp3')
-            audio = AudioSegment.from_wav(str(wav_file))
-            audio.export(str(mp3_file), format="mp3", bitrate="192k")
-            wav_file.unlink(missing_ok=True)
-        except Exception:
-            pass  # Silently fail - keep WAV if conversion fails
 
-# ---------- TTS FUNCTIONS ----------
+def safe_unlink(file_path: pathlib.Path) -> None:
+    """Safely delete a file with error handling."""
+    try:
+        file_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def convert_sentence_wavs_to_mp3(sentence_id: str, audio_dir: pathlib.Path) -> None:
+    """Convert WAV files to MP3."""
+    for wav_file in audio_dir.glob(f"sentence_{sentence_id}_*.wav"):
+        try:
+            audio = AudioSegment.from_wav(str(wav_file))
+            audio.export(str(wav_file.with_suffix(".mp3")), format="mp3", bitrate="192k")
+            safe_unlink(wav_file)
+        except Exception:
+            pass
+
+
+def add_end_silence_to_wav(input_file: pathlib.Path, output_file: Optional[pathlib.Path] = None) -> bool:
+    """Add end silence to a WAV file using pydub."""
+    if output_file is None:
+        output_file = input_file
+    
+    try:
+        audio = AudioSegment.from_wav(str(input_file))
+        silence = AudioSegment.silent(duration=PAUSE_END_SILENCE_MS,
+                                       frame_rate=audio.frame_rate)
+        silence = silence.set_channels(audio.channels).set_sample_width(audio.sample_width)
+        audio_with_silence = audio + silence
+        
+        # Export to temporary file first, then replace
+        temp_file = output_file.with_suffix(f".temp{output_file.suffix}")
+        audio_with_silence.export(str(temp_file), format="wav")
+        
+        # Replace original with new file
+        safe_unlink(output_file)
+        temp_file.rename(output_file)
+        return True
+    except Exception:
+        return False
+
+
 def test_voice(voice_name: str, lang_code: str) -> Optional[Dict]:
-    """Test if a voice works with simple text."""
+    """Test if a voice works."""
     test_text = "こんにちは" if lang_code == LANG_CODE_JA else "Hello"
     test_file = AUDIO_OUTPUT_DIR / "_test.wav"
 
-    args = [
-        BAL4WEB, "-s", "microsoft", "-l", lang_code,
-        "-n", voice_name, "-t", test_text, "-w", str(test_file)
-    ]
+    args = [BAL4WEB, "-s", "microsoft", "-l", lang_code,
+            "-n", voice_name, "-t", test_text, "-w", str(test_file),
+            "-fr", str(FORCE_SAMPLE_RATE_KHZ)]
 
     try:
-        subprocess.run(
-            args, check=True, capture_output=True,
-            text=True, timeout=10, encoding="utf-8"
-        )
+        subprocess.run(args, check=True, capture_output=True, text=True, timeout=10, encoding="utf-8")
         if file_has_audio(test_file):
-            test_file.unlink(missing_ok=True)
+            safe_unlink(test_file)
             return {"name": voice_name, "lang": lang_code}
     except Exception:
         pass
 
-    test_file.unlink(missing_ok=True)
+    safe_unlink(test_file)
     return None
 
-def generate_audio_once(text: str, output_file: pathlib.Path, voice_params: Dict) -> bool:
-    """Single attempt to generate audio."""
+
+class TTSGenerator:
+    """Handles TTS generation with segment-specific settings."""
+    
+    @staticmethod
+    def _get_speech_rate(lang_code: str, segment_type: str) -> Optional[float]:
+        """Get speech rate based on language and segment type."""
+        if lang_code != LANG_CODE_JA:
+            return None
+            
+        rates = {
+            "sentence_number": JA_SPEECH_RATE_SENTENCE_NUMBER,
+            "japanese_male": JA_SPEECH_RATE_JAPANESE_MALE,
+            "alternating": JA_SPEECH_RATE_ALTERNATING,
+        }
+        return rates.get(segment_type, JA_SPEECH_RATE_JAPANESE_MALE)
+    
+    @staticmethod
+    def build_args(text: str, output_file: pathlib.Path, voice_params: Dict, 
+                   include_lang: bool, segment_type: str = None, add_end_silence: bool = True) -> List[str]:
+        """Build command-line arguments for bal4web."""
+        voice_name = voice_params["name"]
+        lang_code = voice_params["lang"]
+
+        args = [BAL4WEB, "-s", "microsoft"]
+        if include_lang:
+            args.extend(["-l", lang_code])
+
+        args.extend(["-n", voice_name, "-t", text, "-w", str(output_file),
+                     "-fr", str(FORCE_SAMPLE_RATE_KHZ)])
+        
+        # Add end silence when requested
+        if add_end_silence and PAUSE_END_SILENCE_MS > 0:
+            args.extend(["-se", str(PAUSE_END_SILENCE_MS)])
+
+        # Apply speech rate for Japanese segments
+        if speech_rate := TTSGenerator._get_speech_rate(lang_code, segment_type):
+            args.extend(["-r", str(speech_rate)])
+
+        return args
+
+
+def generate_audio_once(text: str, output_file: pathlib.Path, voice_params: Dict, 
+                        segment_type: str = None, add_end_silence: bool = True) -> bool:
+    """Single attempt to generate audio with segment-specific settings."""
     if not text or not text.strip():
         return False
 
@@ -97,47 +174,37 @@ def generate_audio_once(text: str, output_file: pathlib.Path, voice_params: Dict
     if not text:
         return False
 
-    voice_name = voice_params["name"]
-    lang_code = voice_params["lang"]
-
-    # Attempt 1: with language code (most deterministic)
-    args_lang = [
-        BAL4WEB, "-s", "microsoft", "-l", lang_code,
-        "-n", voice_name, "-t", text, "-w", str(output_file)
-    ]
-
+    # Attempt with language code
+    args_lang = TTSGenerator.build_args(text, output_file, voice_params, 
+                                       include_lang=True, segment_type=segment_type,
+                                       add_end_silence=add_end_silence)
     try:
-        subprocess.run(
-            args_lang, check=True, capture_output=True,
-            text=True, timeout=30, encoding="utf-8"
-        )
+        subprocess.run(args_lang, check=True, capture_output=True, text=True, timeout=30, encoding="utf-8")
         if file_has_audio(output_file):
             return True
     except subprocess.CalledProcessError:
-        # Attempt 2: without language code (fallback)
-        args_nolang = [
-            BAL4WEB, "-s", "microsoft",
-            "-n", voice_name, "-t", text, "-w", str(output_file)
-        ]
+        # Fallback without language code
+        args_nolang = TTSGenerator.build_args(text, output_file, voice_params,
+                                            include_lang=False, segment_type=segment_type,
+                                            add_end_silence=add_end_silence)
         try:
-            subprocess.run(
-                args_nolang, check=True, capture_output=True,
-                text=True, timeout=30, encoding="utf-8"
-            )
+            subprocess.run(args_nolang, check=True, capture_output=True, text=True, timeout=30, encoding="utf-8")
             return file_has_audio(output_file)
         except Exception:
             return False
     except Exception:
         return False
 
-    return False  # Explicit return if we reach here
+    return False
 
-def generate_audio_retry(text: str, output_file: pathlib.Path, voice_params: Dict,
+
+def generate_audio_retry(text: str, output_file: pathlib.Path, voice_params: Dict, 
+                         segment_type: str = None, add_end_silence: bool = True,
                          attempts: int = MAX_RETRIES) -> bool:
-    """Retry wrapper for transient failures with exponential backoff + jitter."""
+    """Retry wrapper with exponential backoff."""
     for i in range(1, attempts + 1):
-        output_file.unlink(missing_ok=True)  # avoid accepting partial output
-        ok = generate_audio_once(text, output_file, voice_params)
+        safe_unlink(output_file)
+        ok = generate_audio_once(text, output_file, voice_params, segment_type, add_end_silence)
         if ok:
             return True
 
@@ -147,10 +214,325 @@ def generate_audio_retry(text: str, output_file: pathlib.Path, voice_params: Dic
 
     return False
 
-# ---------- MAIN PROCESSING ----------
+
+class AudioCombiner:
+    """Handles audio file combination with pause insertion."""
+    
+    @staticmethod
+    def _wav_params_tuple(w: wave.Wave_read) -> Tuple[int, int, int, int]:
+        """Get WAV parameters as a comparable tuple."""
+        params = w.getparams()
+        return (params.nchannels, params.sampwidth, params.framerate, 1 if params.comptype == "NONE" else 0)
+    
+    @staticmethod
+    def combine_fast_with_silence(input_files: List[pathlib.Path], output_file: pathlib.Path, pause_ms: int) -> bool:
+        """Fast WAV concatenation with silence insertion."""
+        if not input_files:
+            return False
+
+        try:
+            first_params = None
+            all_frames = b""
+            nchannels = sampwidth = framerate = 0
+
+            for idx, input_file in enumerate(input_files):
+                if not file_has_audio(input_file):
+                    return False
+
+                with wave.open(str(input_file), "rb") as w:
+                    if first_params is None:
+                        first_params = w.getparams()
+                        nchannels, sampwidth, framerate, is_pcm = AudioCombiner._wav_params_tuple(w)
+                        if is_pcm != 1:
+                            return False
+                    else:
+                        current_params = AudioCombiner._wav_params_tuple(w)
+                        if current_params != (nchannels, sampwidth, framerate, 1):
+                            return False
+
+                    # Insert silence between files
+                    if pause_ms > 0 and idx > 0:
+                        silence_frames = int(framerate * (pause_ms / 1000.0))
+                        if silence_frames > 0:
+                            silence_bytes = b"\x00" * (silence_frames * nchannels * sampwidth)
+                            all_frames += silence_bytes
+
+                    all_frames += w.readframes(w.getnframes())
+
+            if first_params and all_frames:
+                with wave.open(str(output_file), "wb") as out:
+                    out.setparams(first_params)
+                    out.writeframes(all_frames)
+                return file_has_audio(output_file)
+        except Exception:
+            return False
+        return False
+    
+    @staticmethod
+    def combine_with_pydub(input_files: List[pathlib.Path], output_file: pathlib.Path, pause_ms: int) -> bool:
+        """Robust fallback using pydub."""
+        if not input_files:
+            return False
+
+        try:
+            combined = None
+            for idx, f in enumerate(input_files):
+                if not file_has_audio(f):
+                    return False
+
+                seg = AudioSegment.from_wav(str(f))
+                seg = seg.set_frame_rate(FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                seg = seg.set_channels(FALLBACK_TARGET_CHANNELS)
+                seg = seg.set_sample_width(FALLBACK_TARGET_SAMPLE_WIDTH_BYTES)
+
+                if combined is None:
+                    combined = seg
+                else:
+                    if pause_ms > 0:
+                        silence = AudioSegment.silent(duration=pause_ms,
+                                                       frame_rate=FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                        silence = silence.set_channels(FALLBACK_TARGET_CHANNELS).set_sample_width(FALLBACK_TARGET_SAMPLE_WIDTH_BYTES)
+                        combined += silence
+                    combined += seg
+
+            if combined:
+                combined.export(str(output_file), format="wav")
+                return file_has_audio(output_file)
+        except Exception:
+            pass
+        return False
+    
+    @staticmethod
+    def combine_wav_files(input_files: List[pathlib.Path], output_file: pathlib.Path, pause_ms: int = 0) -> bool:
+        """Combine WAV files with optional pauses."""
+        if not input_files:
+            return False
+
+        return (AudioCombiner.combine_fast_with_silence(input_files, output_file, pause_ms) or
+                AudioCombiner.combine_with_pydub(input_files, output_file, pause_ms))
+
+
+class SentenceProcessor:
+    """Processes a single sentence with all its audio segments."""
+    
+    def __init__(self, sid: str, row: Dict, voices: Dict, audio_dir: pathlib.Path):
+        self.sid = sid
+        self.row = row
+        self.voices = voices
+        self.audio_dir = audio_dir
+        
+        self.jp_text = clean_text(row.get("japanese", ""))
+        self.en_text = clean_text(row.get("english", ""))
+        
+        self.errors = []
+        self.skipped_parts = []
+    
+    def _extract_part_number(self, filename: str) -> str:
+        """Extract part number from filename like '1_sentence_number' or '3_english_translation'."""
+        parts = filename.split('_')
+        if parts and parts[0].isdigit():
+            return parts[0]
+        return "?"
+    
+    def generate_segment(self, text: str, filename: str, voice_key: str, 
+                        segment_type: str = None, optional: bool = False,
+                        add_end_silence: bool = True) -> Optional[pathlib.Path]:
+        """Generate a single audio segment."""
+        part_num = self._extract_part_number(filename)
+        
+        if not text and optional:
+            self.skipped_parts.append(part_num)
+            return None
+            
+        if not text:
+            return None
+            
+        temp_file = self.audio_dir / f"sentence_{self.sid}_{filename}_temp.wav"
+        
+        if voice_key not in self.voices:
+            if optional:
+                self.skipped_parts.append(part_num)
+                return None
+            self.errors.append(part_num)
+            return None
+        
+        if generate_audio_retry(text, temp_file, self.voices[voice_key], 
+                               segment_type, add_end_silence):
+            return temp_file
+        else:
+            if optional:
+                self.skipped_parts.append(part_num)
+            else:
+                self.errors.append(part_num)
+            return None
+    
+    def process_sentence_number(self) -> Optional[Tuple[pathlib.Path, pathlib.Path]]:
+        """Process sentence number segment."""
+        num_text = f"{self.sid}番目"
+        gender = random.choice(["male", "female"])
+        temp_file = self.generate_segment(num_text, "1_sentence_number", 
+                                         f"ja_{gender}", "sentence_number", 
+                                         add_end_silence=True)
+        if temp_file:
+            final_file = self.audio_dir / f"sentence_{self.sid}_1_sentence_number.wav"
+            return (temp_file, final_file)
+        return None
+    
+    def process_japanese_male(self) -> Optional[Tuple[pathlib.Path, pathlib.Path]]:
+        """Process Japanese male segment."""
+        if not self.jp_text:
+            self.skipped_parts.append("2")
+            return None
+            
+        temp_file = self.generate_segment(self.jp_text, "2_japanese_male", 
+                                         "ja_male", "japanese_male",
+                                         add_end_silence=True)
+        if temp_file:
+            final_file = self.audio_dir / f"sentence_{self.sid}_2_japanese_male.wav"
+            return (temp_file, final_file)
+        return None
+    
+    def process_english_translation(self) -> Optional[Tuple[pathlib.Path, pathlib.Path]]:
+        """Process English translation segment."""
+        if not self.en_text:
+            self.skipped_parts.append("3")
+            return None
+            
+        temp_file = self.generate_segment(self.en_text, "3_english_translation", 
+                                         "en_male", optional=True,
+                                         add_end_silence=True)
+        if temp_file:
+            final_file = self.audio_dir / f"sentence_{self.sid}_3_english_translation.wav"
+            return (temp_file, final_file)
+        return None
+    
+    def process_breakdown(self) -> Optional[pathlib.Path]:
+        """Process breakdown combined segment."""
+        final_file = self.audio_dir / f"sentence_{self.sid}_4_breakdown_combined.wav"
+        breakdown_pairs = self._collect_breakdown_pairs()
+        
+        if not breakdown_pairs or "en_male" not in self.voices:
+            self.skipped_parts.append("4")
+            return None
+        
+        breakdown_temp_files = []
+        
+        for pair_idx, (part_jp, breakdown_en) in enumerate(breakdown_pairs, 1):
+            # Generate Japanese part WITHOUT end silence (will be added during combining)
+            temp_jp = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_jp_temp.wav"
+            if not generate_audio_retry(part_jp, temp_jp, self.voices["ja_male"], 
+                                       "japanese_male", add_end_silence=False):
+                self.errors.append("4")
+                return None
+            breakdown_temp_files.append(temp_jp)
+            
+            # Generate English breakdown WITHOUT end silence
+            temp_en = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_en_temp.wav"
+            if not generate_audio_retry(breakdown_en, temp_en, self.voices["en_male"],
+                                       add_end_silence=False):
+                self.errors.append("4")
+                # Clean up already generated files
+                for temp_file in breakdown_temp_files:
+                    safe_unlink(temp_file)
+                return None
+            breakdown_temp_files.append(temp_en)
+        
+        # Combine with the TOTAL pause specified in PAUSE_IN_BREAKDOWN_MS
+        if AudioCombiner.combine_wav_files(breakdown_temp_files, final_file, 
+                                          pause_ms=PAUSE_IN_BREAKDOWN_MS):
+            # Add end silence to the final combined file
+            if PAUSE_END_SILENCE_MS > 0:
+                add_end_silence_to_wav(final_file)
+            
+            for temp_file in breakdown_temp_files:
+                safe_unlink(temp_file)
+            return final_file
+        else:
+            self.errors.append("4")
+            for temp_file in breakdown_temp_files:
+                safe_unlink(temp_file)
+            return None
+    
+    def process_alternating(self) -> Optional[pathlib.Path]:
+        """Process Japanese alternating segment."""
+        final_file = self.audio_dir / f"sentence_{self.sid}_5_japanese_alternating.wav"
+        
+        if not self.jp_text:
+            self.skipped_parts.append("5")
+            return None
+        
+        # Generate female version WITHOUT end silence (will be added during combining)
+        temp5a = self.audio_dir / f"sentence_{self.sid}_5a_temp.wav"
+        if not generate_audio_retry(self.jp_text, temp5a, self.voices["ja_female"], 
+                                   "alternating", add_end_silence=False):
+            self.errors.append("5")
+            return None
+        
+        # Generate male version WITHOUT end silence (fresh, with alternating speed)
+        temp5b = self.audio_dir / f"sentence_{self.sid}_5b_temp.wav"
+        if not generate_audio_retry(self.jp_text, temp5b, self.voices["ja_male"], 
+                                   "alternating", add_end_silence=False):
+            self.errors.append("5")
+            safe_unlink(temp5a)
+            return None
+        
+        # Combine with the TOTAL pause specified in PAUSE_IN_ALTERNATING_MS
+        if AudioCombiner.combine_wav_files([temp5a, temp5b], final_file, 
+                                          pause_ms=PAUSE_IN_ALTERNATING_MS):
+            # Add end silence to the final combined file
+            if PAUSE_END_SILENCE_MS > 0:
+                add_end_silence_to_wav(final_file)
+            
+            safe_unlink(temp5a)
+            safe_unlink(temp5b)
+            return final_file
+        else:
+            self.errors.append("5")
+            safe_unlink(temp5a)
+            safe_unlink(temp5b)
+            return None
+    
+    def _collect_breakdown_pairs(self) -> List[Tuple[str, str]]:
+        """Collect all breakdown pairs from the row data."""
+        pairs = []
+        
+        # Old format
+        old_part = clean_text(self.row.get("part_to_breakdown", ""))
+        old_breakdown = clean_text(self.row.get("breakdown", ""))
+        if old_part and old_breakdown:
+            pairs.append((old_part, old_breakdown))
+        
+        # New format (up to 3 breakdowns)
+        for i in range(1, 4):
+            part_key = f"part_to_breakdown_{i}"
+            breakdown_key = f"breakdown_{i}"
+            part_jp = clean_text(self.row.get(part_key, ""))
+            breakdown_en = clean_text(self.row.get(breakdown_key, ""))
+            if part_jp and breakdown_en:
+                pairs.append((part_jp, breakdown_en))
+        
+        return pairs
+
+
+def count_sentence_files(sentence_id: str, audio_dir: pathlib.Path) -> int:
+    """Count MP3 files for a specific sentence."""
+    return len(list(audio_dir.glob(f"sentence_{sentence_id}_*.mp3")))
+
+
+def sentence_has_required_files(sentence_id: str, audio_dir: pathlib.Path) -> bool:
+    """Check if all required MP3 files exist for a sentence."""
+    required_patterns = [
+        f"sentence_{sentence_id}_1_sentence_number.mp3",
+        f"sentence_{sentence_id}_2_japanese_male.mp3",
+        f"sentence_{sentence_id}_3_english_translation.mp3",
+        f"sentence_{sentence_id}_5_japanese_alternating.mp3"
+    ]
+    return all((audio_dir / pattern).exists() for pattern in required_patterns)
+
+
 def main():
     print("=" * 60)
-    print("Japanese Audio Generator")
+    print("Japanese Audio Generator (Corrected)")
     print("=" * 60)
 
     if not pathlib.Path(BAL4WEB).exists():
@@ -159,14 +541,13 @@ def main():
 
     AUDIO_OUTPUT_DIR.mkdir(exist_ok=True)
 
-    # Detect voices
+    # Voice detection
     print("Detecting voices...")
     voices: Dict[str, Dict] = {}
 
     for gender in ["male", "female"]:
         for voice_name in JAPANESE_VOICES[gender]["candidates"]:
-            voice = test_voice(voice_name, LANG_CODE_JA)
-            if voice:
+            if voice := test_voice(voice_name, LANG_CODE_JA):
                 voices[f"ja_{gender}"] = voice
                 print(f"✓ Japanese {gender}: {voice_name}")
                 break
@@ -174,8 +555,7 @@ def main():
             print(f"✗ Japanese {gender}: Not found")
 
     for voice_name in ENGLISH_VOICES:
-        voice = test_voice(voice_name, LANG_CODE_EN)
-        if voice:
+        if voice := test_voice(voice_name, LANG_CODE_EN):
             voices["en_male"] = voice
             print(f"✓ English: {voice_name}")
             break
@@ -186,8 +566,7 @@ def main():
         print("ERROR: Need both Japanese voices")
         sys.exit(1)
 
-    # Load sentences
-    print("\nLoading JSON...")
+    # Load JSON data
     if not INPUT_JSON_PATH.exists():
         print(f"ERROR: {INPUT_JSON} not found")
         sys.exit(1)
@@ -195,247 +574,118 @@ def main():
     with open(INPUT_JSON_PATH, "r", encoding="utf-8") as f:
         root = json.load(f)
 
-    sentences = root.get("sentences", {})
-    if not sentences:
+    if not (sentences := root.get("sentences", {})):
         print("ERROR: No sentences found")
         sys.exit(1)
 
     print(f"Loaded {len(sentences)} sentences")
+    sentence_ids = sorted(sentences.keys(), key=lambda x: int(x) if x.isdigit() else float("inf"))
 
-    sentence_ids = sorted(
-        sentences.keys(),
-        key=lambda x: int(x) if x.isdigit() else float("inf")
-    )
-
+    print(f"\nUsing settings:")
+    print(f"  Japanese speech rates:")
+    print(f"    Sentence number: {JA_SPEECH_RATE_SENTENCE_NUMBER}")
+    print(f"    Japanese male: {JA_SPEECH_RATE_JAPANESE_MALE}")
+    print(f"    Alternating: {JA_SPEECH_RATE_ALTERNATING}")
+    print(f"  Pauses:")
+    print(f"    Breakdown (Part 4): {PAUSE_IN_BREAKDOWN_MS}ms TOTAL between components")
+    print(f"    Alternating (Part 5): {PAUSE_IN_ALTERNATING_MS}ms TOTAL between voices")
+    print(f"    End silence on ALL parts (1-5): {PAUSE_END_SILENCE_MS}ms")
     print("\nStarting generation...")
+
     start_time = time.time()
     success_count = 0
 
     for idx, sid in enumerate(sentence_ids, 1):
         row = sentences[sid]
 
-        elapsed = time.time() - start_time
+        # Progress tracking with ETA
         if idx > 1:
-            avg = elapsed / idx
+            avg = (time.time() - start_time) / idx
             remaining = avg * (len(sentence_ids) - idx)
-            eta = f"{remaining/60:.1f}m" if remaining > 60 else f"{remaining:.0f}s"
+            if remaining >= 3600:
+                eta = f"{remaining / 3600:.1f}h"
+            elif remaining >= 60:
+                eta = f"{remaining / 60:.1f}m"
+            else:
+                eta = f"{remaining:.0f}s"
         else:
             eta = "calc..."
 
         print(f"[{idx:3d}/{len(sentence_ids)}] Sentence {sid} - ETA: {eta}", end=" ")
 
-        files_to_rename: List[Tuple[pathlib.Path, pathlib.Path]] = []
-        errors: List[str] = []
-        skipped_parts: List[str] = []
-        breakdown_combined_created = False
-        alternating_created = False
+        # Process sentence
+        processor = SentenceProcessor(sid, row, voices, AUDIO_OUTPUT_DIR)
+        
+        # Generate all segments
+        segments_to_rename = []
+        
+        # Parts 1-3 (with end silence generated directly)
+        for processor_func in [processor.process_sentence_number, 
+                               processor.process_japanese_male, 
+                               processor.process_english_translation]:
+            if result := processor_func():
+                segments_to_rename.append(result)
+        
+        # Part 4 (breakdown) - components without end silence, final file gets end silence
+        if breakdown_file := processor.process_breakdown():
+            # File already has final name with end silence
+            pass
+        
+        # Part 5 (alternating) - components without end silence, final file gets end silence
+        if alternating_file := processor.process_alternating():
+            # File already has final name with end silence
+            pass
 
-        # 1. Sentence number
-        num_text = f"{sid}番目"
-        gender = random.choice(["male", "female"])
-        voice = voices[f"ja_{gender}"]
-        temp1 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_temp.wav"
-        final1 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.wav"
-
-        if generate_audio_retry(num_text, temp1, voice):
-            files_to_rename.append((temp1, final1))
-        else:
-            errors.append("1")
-
-        # 2. Japanese sentence (male)
-        jp_text = clean_text(row.get("japanese", ""))
-        temp2 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_temp.wav"
-        final2 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.wav"
-
-        if jp_text:
-            if generate_audio_retry(jp_text, temp2, voices["ja_male"]):
-                files_to_rename.append((temp2, final2))
-            else:
-                errors.append("2")
-        else:
-            skipped_parts.append("2")
-
-        # 3. English translation
-        en_text = clean_text(row.get("english", ""))
-        temp3 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_temp.wav"
-        final3 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.wav"
-
-        if en_text and "en_male" in voices:
-            if generate_audio_retry(en_text, temp3, voices["en_male"]):
-                files_to_rename.append((temp3, final3))
-            else:
-                errors.append("3")
-        else:
-            if not en_text:
-                skipped_parts.append("3")
-
-        # 4. Breakdown parts (combined)
-        part_jp = clean_text(row.get("part_to_breakdown", ""))
-        breakdown_en = clean_text(row.get("breakdown", ""))
-        final4 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_4_breakdown_combined.wav"
-
-        if part_jp and breakdown_en and "en_male" in voices:
-            temp4a = AUDIO_OUTPUT_DIR / f"sentence_{sid}_4a_temp.wav"
-            temp4b = AUDIO_OUTPUT_DIR / f"sentence_{sid}_4b_temp.wav"
-
-            part_ok = generate_audio_retry(part_jp, temp4a, voices["ja_male"])
-            breakdown_ok = generate_audio_retry(breakdown_en, temp4b, voices["en_male"])
-
-            if part_ok and breakdown_ok:
-                try:
-                    with wave.open(str(temp4a), "rb") as w1:
-                        f1 = w1.readframes(w1.getnframes())
-                        params = w1.getparams()
-
-                    with wave.open(str(temp4b), "rb") as w2:
-                        f2 = w2.readframes(w2.getnframes())
-
-                    with wave.open(str(final4), "wb") as out:
-                        out.setparams(params)
-                        out.writeframes(f1 + f2)
-
-                    temp4a.unlink(missing_ok=True)
-                    temp4b.unlink(missing_ok=True)
-                    breakdown_combined_created = True
-                except Exception:
-                    errors.append("4c")
-            else:
-                if not part_ok:
-                    errors.append("4a")
-                if not breakdown_ok:
-                    errors.append("4b")
-        else:
-            if not part_jp or not breakdown_en:
-                skipped_parts.append("4")
-
-        # 5. Japanese alternating (female + male repeat)
-        final5 = AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.wav"
-
-        if jp_text:
-            temp5a = AUDIO_OUTPUT_DIR / f"sentence_{sid}_5a_temp.wav"
-
-            if generate_audio_retry(jp_text, temp5a, voices["ja_female"]):
-                male_audio: Optional[pathlib.Path] = None
-
-                # If part 2 temp exists (before rename), use it; else generate dedicated male temp
-                if file_has_audio(temp2):
-                    male_audio = temp2
-                else:
-                    temp5b = AUDIO_OUTPUT_DIR / f"sentence_{sid}_5b_temp.wav"
-                    if generate_audio_retry(jp_text, temp5b, voices["ja_male"]):
-                        male_audio = temp5b
-                    else:
-                        errors.append("5b")
-                        male_audio = None
-
-                try:
-                    if male_audio:
-                        with wave.open(str(temp5a), "rb") as w1:
-                            f1 = w1.readframes(w1.getnframes())
-                            params = w1.getparams()
-
-                        with wave.open(str(male_audio), "rb") as w2:
-                            f2 = w2.readframes(w2.getnframes())
-
-                        with wave.open(str(final5), "wb") as out:
-                            out.setparams(params)
-                            out.writeframes(f1 + f2)
-
-                        # Only delete male temp if it is the dedicated 5b temp
-                        if male_audio.name.endswith("5b_temp.wav"):
-                            male_audio.unlink(missing_ok=True)
-                    else:
-                        temp5a.rename(final5)
-
-                    temp5a.unlink(missing_ok=True)
-                    alternating_created = True
-                except Exception:
-                    errors.append("5c")
-            else:
-                errors.append("5a")
-        else:
-            skipped_parts.append("5")
-
-        # Rename temp files to final names (overwrite-safe)
-        for temp_path, final_path in files_to_rename:
+        # Rename temp files to final names
+        for temp_path, final_path in segments_to_rename:
             try:
                 if temp_path.exists():
                     if final_path.exists():
-                        final_path.unlink(missing_ok=True)
+                        safe_unlink(final_path)
                     temp_path.rename(final_path)
             except Exception:
                 pass
 
         # Clean up any remaining temp files
-        for temp_file in AUDIO_OUTPUT_DIR.glob(f"*{sid}*temp*.wav"):
-            temp_file.unlink(missing_ok=True)
+        for temp_file in AUDIO_OUTPUT_DIR.glob(f"sentence_{sid}_*temp*.wav"):
+            safe_unlink(temp_file)
 
         # Convert WAV files to MP3 for this sentence
         convert_sentence_wavs_to_mp3(sid, AUDIO_OUTPUT_DIR)
 
-        # Count created files for this sentence (now counting MP3 files)
-        count_files = 0
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.mp3").exists():
-            count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.mp3").exists():
-            count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.mp3").exists():
-            count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_4_breakdown_combined.mp3").exists():
-            count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.mp3").exists():
-            count_files += 1
+        # Count created files for this sentence
+        count_files = count_sentence_files(sid, AUDIO_OUTPUT_DIR)
 
-        if errors:
-            print(f"✓{count_files} ✗{len(errors)}", end="")
-            if skipped_parts:
-                print(f" -{len(skipped_parts)}", end="")
-            print()
-        elif skipped_parts:
-            print(f"✓{count_files} -{len(skipped_parts)}")
-        else:
-            print(f"✓{count_files}")
+        # Status output - sort errors/skips for better readability
+        errors_sorted = sorted(set(processor.errors))
+        skips_sorted = sorted(set(processor.skipped_parts))
+        
+        status_parts = []
+        if errors_sorted:
+            status_parts.append(f"✗✗✗{','.join(errors_sorted)}")
+        if skips_sorted:
+            status_parts.append(f"-{','.join(skips_sorted)}")
+        
+        print(f"✓{count_files} " + " ".join(status_parts) if status_parts else f"✓{count_files}")
 
-        # Count as success if we have at least 1,2,3,5
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.mp3").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.mp3").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.mp3").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.mp3").exists():
+        # Count as success if we have all required files
+        if sentence_has_required_files(sid, AUDIO_OUTPUT_DIR):
             success_count += 1
 
         time.sleep(0.1)
 
     # Final summary
     total_time = time.time() - start_time
-    final_files = list(AUDIO_OUTPUT_DIR.glob("sentence_*.mp3"))
-
-    file_counts = {str(i): 0 for i in range(1, 6)}
-    for f in final_files:
-        match = re.search(r"sentence_\d+_(\d+)_", f.name)
-        if match:
-            part = match.group(1)
-            if part in file_counts:
-                file_counts[part] += 1
 
     print("\n" + "=" * 60)
     print("COMPLETE")
     print("=" * 60)
-    print(f"Time: {total_time/60:.1f} minutes")
+    print(f"Time: {total_time / 60:.1f} minutes")
     print(f"Sentences: {len(sentences)}")
-    print(f"Success rate: {success_count/len(sentences)*100:.1f}%")
-    print(f"Avg per sentence: {total_time/len(sentences):.1f}s")
-    print(f"\nFiles created: {len(final_files)}")
-    print("File breakdown:")
-    for part_num in sorted(file_counts.keys()):
-        desc = {
-            "1": "sentence_number",
-            "2": "japanese_male",
-            "3": "english_translation",
-            "4": "breakdown_combined",
-            "5": "japanese_alternating",
-        }.get(part_num, f"part_{part_num}")
-        print(f"  Part {part_num} ({desc}): {file_counts[part_num]}")
-    print(f"\nOutput: {AUDIO_OUTPUT_DIR}")
+    print(f"Success rate: {success_count / len(sentences) * 100:.1f}%")
+    print(f"Avg per sentence: {total_time / len(sentences):.1f}s")
+    print(f"\nOutput directory: {AUDIO_OUTPUT_DIR}")
+
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 """
 DeepSeek Japanese-to-English Translator
 Batch-based processing with progress saving
-Enhanced breakdown structure
+Enhanced breakdown structure with up to 3 expressions
 """
 
 import json
@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import requests
@@ -99,6 +100,7 @@ def read_batches() -> List[str]:
 def split_japanese_sentences(text: str) -> List[Tuple[int, str]]:
     """
     Split Japanese text into sentences with indices.
+    Improved to handle Japanese quote marks properly.
     Returns list of (index, sentence) tuples.
     """
     if not text or not text.strip():
@@ -106,10 +108,19 @@ def split_japanese_sentences(text: str) -> List[Tuple[int, str]]:
     
     sentences: List[str] = []
     current = ""
+    quote_depth = 0  # Track nested quotes
     
     for char in text:
         current += char
-        if char in '。！？' and len(current) > 1:
+        
+        # Track quote nesting
+        if char == '「' or char == '『':
+            quote_depth += 1
+        elif char == '」' or char == '』':
+            quote_depth -= 1
+        
+        # Only split at sentence boundaries when not inside quotes
+        if char in '。！？' and len(current) > 1 and quote_depth == 0:
             sentences.append(current.strip())
             current = ""
     
@@ -120,11 +131,58 @@ def split_japanese_sentences(text: str) -> List[Tuple[int, str]]:
     return [(i + 1, s) for i, s in enumerate(sentences) if s]
 
 
-def clean_japanese_characters(text: str) -> str:
-    """Remove Japanese characters from text (for English fields only)."""
+def clean_english_text(text: str, is_breakdown: bool = False) -> str:
+    """
+    Clean English text to ensure it contains only safe ASCII characters.
+    
+    Args:
+        text: The text to clean
+        is_breakdown: If True, remove all double quotes (for breakdown fields)
+    """
     if not text:
         return ""
-    return re.sub(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3000-\u303F\uFF00-\uFFEF]', '', text).strip()
+    
+    # First, normalize Unicode characters
+    text = unicodedata.normalize('NFKC', text)
+    
+    # Replace common punctuation with ASCII equivalents
+    replacements = {
+        '「': '"', '」': '"',   # Japanese quotes to ASCII quotes
+        '『': '"', '』': '"',   # Japanese double quotes
+        '、': ',', '。': '.',   # Japanese punctuation
+        '・': '·', '〜': '~',   # Other Japanese chars
+        'ー': '-', '…': '...',  # More replacements
+        '―': '-', '‥': '..',
+        '「': '"', '」': '"',   # Curly quotes to straight quotes
+        '「': "'", '」': "'",   # Curly apostrophes
+        '—': '-', '–': '-',     # Various dashes to hyphen
+    }
+    
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    
+    # If this is a breakdown field, remove ALL double quotes
+    # Breakdowns should explain, not quote Japanese phrases
+    if is_breakdown:
+        text = text.replace('"', '')
+    
+    # Remove any remaining non-ASCII characters
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
+    
+    # Clean up quotes - remove escaped quotes completely
+    text = text.replace('\\"', '').replace("\\'", "'")
+    
+    # Remove any control characters except newline and tab
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
+    
+    # Clean up whitespace
+    text = ' '.join(text.split())
+    
+    # Final cleanup: ensure no problematic quote sequences
+    text = re.sub(r'"{2,}', '', text)  # Remove multiple consecutive quotes
+    text = re.sub(r"'{2,}", "'", text)  # Remove multiple consecutive apostrophes
+    
+    return text.strip()
 
 
 class BatchTranslator:
@@ -198,60 +256,98 @@ class BatchTranslator:
         # Create numbered sentences for the prompt
         numbered_sentences = "\n".join([f"{num}. {text}" for num, text in sentences])
         
-        # Optimized prompt with new breakdown structure
+        # Optimized prompt with up to 3 breakdown expressions
         system_prompt = """You are an expert Japanese-to-English translator.
         
         TASK:
         Translate each Japanese sentence to English, maintaining context across sentences.
         For each sentence, provide:
         1. A faithful English translation
-        2. If the sentence contains an advanced expression, grammar point, or obscure cultural reference worth explaining:
-           - Identify the specific Japanese word/phrase
-           - Provide a concise explanation (max 3-4 sentences)
+        2. Up to THREE (0-3) grammar points, advanced expressions, or obscure cultural references worth explaining:
+           - Identify the specific Japanese word/phrase for each
+           - Provide a concise explanation for each (max 3-4 sentences per breakdown)
         
         REQUIREMENTS:
         * Provide translations as close and faithful as possible to the original.
         * If context is missing (e.g., who is the subject), keep it neutral rather than guessing.
-        * Only provide breakdown for ONE grammar point or expression per sentence.
-        * For simple everyday sentences, leave part_to_breakdown and breakdown empty.
+        * Provide breakdowns for only the most important/significant expressions (max 3 per sentence).
+        * For very simple everyday sentences, leave all breakdown fields empty.
         * English output must NOT contain any Japanese characters.
-        * In breakdown, use romanization only (e.g., "hara-guroi" not "腹黒い").
+        * In breakdowns, use romanization only (e.g., "hara-guroi" not "腹黒い").
+        * Use only ASCII characters in English output (no special Unicode quotes or punctuation).
         
         OUTPUT FORMAT:
         Return a JSON array where each object has:
         {
           "sentence_number": (number from input),
           "english": "English translation",
-          "part_to_breakdown": "Japanese word/phrase being explained OR empty string",
-          "breakdown": "Brief explanation OR empty string"
+          "part_to_breakdown_1": "Japanese word/phrase being explained OR empty string",
+          "breakdown_1": "Brief explanation OR empty string",
+          "part_to_breakdown_2": "Japanese word/phrase being explained OR empty string",
+          "breakdown_2": "Brief explanation OR empty string",
+          "part_to_breakdown_3": "Japanese word/phrase being explained OR empty string",
+          "breakdown_3": "Brief explanation OR empty string"
         }
         
+        IMPORTANT:
+        * Fill breakdowns sequentially (1, then 2, then 3). Don't skip numbers.
+        * If a sentence has only 2 breakdowns, leave fields 3 empty.
+        * If a sentence has only 1 breakdown, leave fields 2 and 3 empty.
+        * In English translation field: Use only ASCII characters (A-Z, a-z, 0-9, and common punctuation).
+        * In part_to_breakdown fields: Keep the actual Japanese characters (for reference).
+        * In breakdown fields: Use only ASCII characters with romanization. Do NOT use double quotes in breakdowns.
+        
         EXAMPLES:
-        Example 1 (simple - no breakdown):
+        Example 1 (simple - no breakdowns):
         Input: "今日はいい天気ですね。"
         Output: {
           "sentence_number": 1,
           "english": "The weather is nice today, isn't it?",
-          "part_to_breakdown": "",
-          "breakdown": ""
+          "part_to_breakdown_1": "",
+          "breakdown_1": "",
+          "part_to_breakdown_2": "",
+          "breakdown_2": "",
+          "part_to_breakdown_3": "",
+          "breakdown_3": ""
         }
         
-        Example 2 (advanced expression):
+        Example 2 (one advanced expression):
         Input: "彼は腹黒い性格だ。"
         Output: {
           "sentence_number": 2,
           "english": "He has a scheming personality.",
-          "part_to_breakdown": "腹黒い",
-          "breakdown": "The term (literally 'belly-black') describes someone who is deceitful or manipulative."
+          "part_to_breakdown_1": "腹黒い",
+          "breakdown_1": "The term (literally 'belly-black') describes someone who is deceitful or manipulative.",
+          "part_to_breakdown_2": "",
+          "breakdown_2": "",
+          "part_to_breakdown_3": "",
+          "breakdown_3": ""
         }
         
-        Example 3 (advanced grammar point):
-        Input: "明日までにレポートを出さなくてはならない。"
+        Example 3 (two advanced expressions):
+        Input: "明日までにレポートを出さなくてはならないが、気が重い。"
         Output: {
           "sentence_number": 3,
-          "english": "I have to submit the report by tomorrow.",
-          "part_to_breakdown": "出さなくてはならない",
-          "breakdown": "This is the '-nakute wa naranai' obligation pattern meaning 'must/have to.' It's generally more formal/written than the conversational '-nakute wa ikenai' variant."
+          "english": "I have to submit the report by tomorrow, but I'm feeling reluctant.",
+          "part_to_breakdown_1": "出さなくてはならない",
+          "breakdown_1": "This is the '-nakute wa naranai' obligation pattern meaning 'must/have to.' It's generally more formal/written than the conversational '-nakute wa ikenai' variant.",
+          "part_to_breakdown_2": "気が重い",
+          "breakdown_2": "Literal 'spirit/heavy,' meaning to feel reluctant, burdened, or unmotivated about something.",
+          "part_to_breakdown_3": "",
+          "breakdown_3": ""
+        }
+        
+        Example 4 (three advanced expressions):
+        Input: "その提案は画竜点睛を欠くものだったが、焼け石に水でも試す価値はある。"
+        Output: {
+          "sentence_number": 4,
+          "english": "The proposal was missing the finishing touch, but it's worth trying even if it's like pouring water on a hot stone.",
+          "part_to_breakdown_1": "画竜点睛",
+          "breakdown_1": "Literally 'dotting the eyes of a painted dragon'. Ga means draw or paint. Ryuu means dragon. Ten means dot. Sei means the pupil of the eye. Meaning: the final crucial touch that makes the whole thing come alive.",
+          "part_to_breakdown_2": "を欠く",
+          "breakdown_2": "'wo kaku' - to lack/be missing. Often used with abstract nouns to indicate something is absent.",
+          "part_to_breakdown_3": "焼け石に水",
+          "breakdown_3": "'Yakeishi ni mizu' - pouring water on a hot stone. Means a futile effort that has little to no effect."
         }
         
         Remember: Maintain consistency and context across all sentences in the batch."""
@@ -263,7 +359,7 @@ JAPANESE SENTENCES:
 
 Provide faithful translations that work well together as a coherent passage.
 Return a JSON array with translations for each numbered sentence.
-Follow the exact output format with sentence_number, english, part_to_breakdown, and breakdown fields."""
+Follow the exact output format with sentence_number, english, and up to 3 breakdown pairs (part_to_breakdown_1-3, breakdown_1-3)."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -307,34 +403,51 @@ Follow the exact output format with sentence_number, english, part_to_breakdown,
                         break
                 
                 if translation and isinstance(translation, dict):
-                    english = clean_japanese_characters(translation.get("english", ""))
-                    part_to_breakdown = translation.get("part_to_breakdown", "")
-                    breakdown = clean_japanese_characters(translation.get("breakdown", ""))
+                    english = clean_english_text(translation.get("english", ""), is_breakdown=False)
+                    
+                    # Get up to 3 breakdown pairs
+                    breakdown_data = {}
+                    for i in range(1, 4):
+                        part_key = f"part_to_breakdown_{i}"
+                        breakdown_key = f"breakdown_{i}"
+                        
+                        # part_to_breakdown should keep Japanese characters (it's the Japanese word/phrase)
+                        part = translation.get(part_key, "")
+                        
+                        # breakdown should have no Japanese characters, only romanization
+                        # Remove all double quotes from breakdowns
+                        breakdown = clean_english_text(translation.get(breakdown_key, ""), is_breakdown=True)
+                        
+                        # If breakdown exists but part is empty, mark as unspecified
+                        if breakdown and not part:
+                            part = "[unspecified]"
+                        
+                        breakdown_data[part_key] = part  # Keep Japanese characters here
+                        breakdown_data[breakdown_key] = breakdown  # Cleaned of Japanese chars
                     
                     # Validate English is not empty
                     if not english or len(english) < 3:
                         english = f"[Translation: {orig_text[:80]}...]"
                     
-                    # If breakdown exists, part_to_breakdown should not be empty
-                    if breakdown and not part_to_breakdown:
-                        part_to_breakdown = "[unspecified]"
-                    
                     results.append({
                         "sentence_number": orig_num,
                         "japanese": orig_text,
                         "english": english,
-                        "part_to_breakdown": part_to_breakdown,
-                        "breakdown": breakdown
+                        **breakdown_data
                     })
                 else:
-                    # If no translation found, create placeholder
-                    results.append({
+                    # If no translation found, create placeholder with empty breakdown fields
+                    placeholder = {
                         "sentence_number": orig_num,
                         "japanese": orig_text,
                         "english": f"[Translation not provided: {orig_text[:80]}...]",
-                        "part_to_breakdown": "",
-                        "breakdown": ""
-                    })
+                    }
+                    # Add empty breakdown fields
+                    for i in range(1, 4):
+                        placeholder[f"part_to_breakdown_{i}"] = ""
+                        placeholder[f"breakdown_{i}"] = ""
+                    
+                    results.append(placeholder)
             
             print(f" ✓ Success")
             return results
@@ -392,14 +505,20 @@ def process_all_batches(translator: BatchTranslator) -> Dict[str, Dict[str, str]
         
         if batch_results:
             for result in batch_results:
-                all_sentences[str(global_sentence_counter)] = {
+                # Build the sentence dictionary with ALL fields including breakdowns
+                sentence_data = {
                     "japanese": result["japanese"],
                     "english": result["english"],
-                    "part_to_breakdown": result["part_to_breakdown"],
-                    "breakdown": result["breakdown"],
                     "original_batch_sentence_num": result.get("sentence_number", 0),
                     "batch_number": batch_num
                 }
+                
+                # Add all breakdown fields (1-3)
+                for i in range(1, 4):
+                    sentence_data[f"part_to_breakdown_{i}"] = result.get(f"part_to_breakdown_{i}", "")
+                    sentence_data[f"breakdown_{i}"] = result.get(f"breakdown_{i}", "")
+                
+                all_sentences[str(global_sentence_counter)] = sentence_data
                 global_sentence_counter += 1
             successful_batches += 1
             
@@ -457,23 +576,36 @@ def save_final_results(sentences: Dict[str, Dict[str, str]], filename: str = OUT
         return False
     
     # Count breakdown statistics
-    with_breakdown = sum(1 for s in sentences.values() if s.get("breakdown"))
+    breakdown_counts = {1: 0, 2: 0, 3: 0}
     breakdown_types = {}
+    
     for s in sentences.values():
-        if s.get("part_to_breakdown") and s.get("breakdown"):
-            part = s["part_to_breakdown"]
-            breakdown_types[part] = breakdown_types.get(part, 0) + 1
+        # Count how many breakdowns this sentence has
+        breakdown_count = 0
+        for i in range(1, 4):
+            if s.get(f"breakdown_{i}") and s.get(f"breakdown_{i}").strip():
+                breakdown_count += 1
+                # Track unique parts
+                part = s.get(f"part_to_breakdown_{i}", "")
+                if part:
+                    breakdown_types[part] = breakdown_types.get(part, 0) + 1
+        
+        if breakdown_count > 0:
+            breakdown_counts[breakdown_count] = breakdown_counts.get(breakdown_count, 0) + 1
+    
+    total_with_breakdown = sum(breakdown_counts.values())
     
     output = {
         "metadata": {
             "total_sentences": len(sentences),
-            "sentences_with_breakdown": with_breakdown,
+            "sentences_with_breakdown": total_with_breakdown,
+            "breakdown_distribution": breakdown_counts,
             "breakdown_types_count": len(breakdown_types),
             "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "processing_method": "Batch-based translation for context",
             "translation_approach": "Faithful translation, neutral when context missing",
-            "breakdown_structure": "part_to_breakdown contains Japanese word/phrase, breakdown contains explanation",
-            "character_rule": "No Japanese characters in English output, romanization only in breakdowns"
+            "breakdown_structure": "Up to 3 breakdown pairs per sentence (part_to_breakdown_1-3, breakdown_1-3)",
+            "character_rule": "No Japanese characters in English output, romanization only in breakdowns, ASCII-only output"
         },
         "sentences": sentences
     }
@@ -493,7 +625,7 @@ def main() -> None:
     """Main function."""
     print("=" * 60)
     print("Japanese to English Translator")
-    print("Batch Processing with Enhanced Breakdown Structure")
+    print("Batch Processing with Enhanced Breakdown Structure (up to 3 expressions)")
     print("=" * 60)
     
     # Load configuration
@@ -517,49 +649,72 @@ def main() -> None:
     
     # Show summary
     total = len(sentences)
-    with_breakdown = sum(1 for s in sentences.values() if s.get("breakdown"))
+    
+    # Calculate breakdown statistics
+    breakdown_counts = {1: 0, 2: 0, 3: 0}
+    for s in sentences.values():
+        breakdown_count = 0
+        for i in range(1, 4):
+            if s.get(f"breakdown_{i}") and s.get(f"breakdown_{i}").strip():
+                breakdown_count += 1
+        if breakdown_count > 0:
+            breakdown_counts[breakdown_count] = breakdown_counts.get(breakdown_count, 0) + 1
+    
+    total_with_breakdown = sum(breakdown_counts.values())
     
     print("\n" + "=" * 60)
     print("📊 FINAL SUMMARY")
     print("=" * 60)
     print(f"Total sentences: {total}")
-    print(f"Sentences with breakdown: {with_breakdown}")
-    print(f"Sentences without breakdown: {total - with_breakdown}")
+    print(f"Sentences with breakdown: {total_with_breakdown}")
+    print(f"Sentences without breakdown: {total - total_with_breakdown}")
+    print("\nBreakdown distribution:")
+    print(f"  1 breakdown: {breakdown_counts.get(1, 0)} sentences")
+    print(f"  2 breakdowns: {breakdown_counts.get(2, 0)} sentences")
+    print(f"  3 breakdowns: {breakdown_counts.get(3, 0)} sentences")
     
     if total > 0:
-        breakdown_rate = (with_breakdown / total) * 100
+        breakdown_rate = (total_with_breakdown / total) * 100
         print(f"Breakdown rate: {breakdown_rate:.1f}%")
     
     # Show examples with new structure
     if sentences:
-        print("\n📄 SAMPLE OUTPUT (with breakdown structure):")
-        # Find some examples with and without breakdowns
-        examples_with_breakdown = []
-        examples_without_breakdown = []
+        print("\n📄 SAMPLE OUTPUT (with new breakdown structure):")
+        
+        # Find examples with different numbers of breakdowns
+        examples = {0: [], 1: [], 2: [], 3: []}
         
         for key, s in sentences.items():
-            if s.get("breakdown") and len(examples_with_breakdown) < 2:
-                examples_with_breakdown.append((key, s))
-            elif not s.get("breakdown") and len(examples_without_breakdown) < 1:
-                examples_without_breakdown.append((key, s))
+            breakdown_count = 0
+            for i in range(1, 4):
+                if s.get(f"breakdown_{i}") and s.get(f"breakdown_{i}").strip():
+                    breakdown_count += 1
             
-            if len(examples_with_breakdown) >= 2 and len(examples_without_breakdown) >= 1:
-                break
+            if len(examples[breakdown_count]) < 2:
+                examples[breakdown_count].append((key, s, breakdown_count))
+            
+            # Stop when we have at least one example of each type (except maybe 3)
+            if all(len(examples[i]) >= 1 for i in [0, 1, 2]):
+                if len(examples[3]) >= 1 or breakdown_count == 3:
+                    break
         
         # Show examples
-        for key, s in examples_with_breakdown:
-            print(f"\n{key}. (WITH BREAKDOWN)")
-            print(f"   Japanese: {s['japanese'][:60]}...")
-            print(f"   English: {s['english'][:60]}...")
-            print(f"   Part: '{s['part_to_breakdown']}'")
-            print(f"   Breakdown: {s['breakdown'][:60]}...")
-        
-        for key, s in examples_without_breakdown:
-            print(f"\n{key}. (NO BREAKDOWN)")
-            print(f"   Japanese: {s['japanese'][:60]}...")
-            print(f"   English: {s['english'][:60]}...")
-            print(f"   Part: '' (empty)")
-            print(f"   Breakdown: '' (empty)")
+        for breakdown_count in [0, 1, 2, 3]:
+            for key, s, count in examples[breakdown_count]:
+                print(f"\n{key}. ({count} BREAKDOWN{'S' if count != 1 else ''})")
+                print(f"   Japanese: {s['japanese'][:60]}...")
+                print(f"   English: {s['english'][:60]}...")
+                
+                if count > 0:
+                    for i in range(1, count + 1):
+                        part = s.get(f"part_to_breakdown_{i}", "")
+                        breakdown = s.get(f"breakdown_{i}", "")
+                        print(f"   Part {i}: '{part}'")
+                        if breakdown:
+                            print(f"   Breakdown {i}: {breakdown[:60]}...")
+                else:
+                    print(f"   Part: '' (no breakdowns)")
+                    print(f"   Breakdown: '' (no breakdowns)")
     
     # Note about progress file
     if Path(PROGRESS_FILE).exists():

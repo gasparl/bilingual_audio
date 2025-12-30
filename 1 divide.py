@@ -8,7 +8,7 @@ INPUT_FILE = "jp.txt"          # Your input text file
 OUTPUT_FILE = "divided_output.txt"  # Output will be saved here
 
 # Batch settings
-MAX_CHARS_PER_BATCH = 1000          # Maximum characters per batch
+MAX_CHARS_PER_BATCH = 500          # Maximum characters per batch
 MIN_PARAGRAPHS_PER_BATCH = 1        # Minimum paragraphs per batch
 MAX_PARAGRAPHS_PER_BATCH = 10       # Maximum paragraphs per batch
 # =========================================================
@@ -21,23 +21,63 @@ print(f"Output: {OUTPUT_FILE}")
 print(f"Max chars per batch: {MAX_CHARS_PER_BATCH}")
 print("=" * 50)
 
+def clean_japanese_text(text: str) -> str:
+    """
+    Clean Japanese text by removing furigana and transcriber notes.
+    Preserves line breaks and paragraph structure.
+    """
+    if not text:
+        return ""
+    
+    # Remove furigana (ruby text) and markers - line by line to preserve structure
+    lines = text.splitlines()
+    cleaned_lines = []
+    
+    for line in lines:
+        # Remove furigana content 《...》
+        line = re.sub(r"《[^》]*》", "", line)
+        # Remove ruby markers ｜
+        line = re.sub(r"｜", "", line)
+        # Remove transcriber notes ［＃...］
+        line = re.sub(r"［＃[^］]*］", "", line)
+        # Clean up multiple spaces within the line (but preserve the line itself)
+        line = re.sub(r"[ \t]+", " ", line)
+        line = line.strip()
+        
+        if line:  # Keep non-empty lines
+            cleaned_lines.append(line)
+        else:
+            # Keep empty lines as they are (for paragraph separation)
+            cleaned_lines.append("")
+    
+    # Rejoin with original line structure
+    cleaned_text = "\n".join(cleaned_lines)
+    
+    return cleaned_text
+
 def safe_read_file(file_path: str) -> str:
-    """Read file with multiple encoding attempts."""
+    """Read file with multiple encoding attempts, with text cleaning."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
+            raw_content = f.read()
+            # Clean the text immediately after reading
+            cleaned_content = clean_japanese_text(raw_content)
+            return cleaned_content
     except UnicodeDecodeError:
         encodings = ['shift_jis', 'euc-jp', 'cp932', 'latin-1', 'utf-8-sig']
         for encoding in encodings:
             try:
                 with open(file_path, 'r', encoding=encoding) as f:
-                    content = f.read()
+                    raw_content = f.read()
                 print(f"✓ Read with encoding: {encoding}")
-                return content
+                # Clean the text immediately after reading
+                cleaned_content = clean_japanese_text(raw_content)
+                return cleaned_content
             except:
                 continue
         raise ValueError(f"Cannot read file with any supported encoding")
 
+# [The rest of the functions remain EXACTLY the same - split_into_paragraphs, split_long_paragraph, etc.]
 def split_into_paragraphs(text: str) -> List[str]:
     """Split text into paragraphs based on empty lines."""
     if not text:
@@ -127,7 +167,7 @@ def split_long_paragraph(paragraph: str) -> List[str]:
             if i + MAX_CHARS_PER_BATCH < len(text):
                 lookback = min(100, len(chunk))
                 for j in range(lookback, 0, -1):
-                    if chunk[-j] in ' \n。！？、，,.':
+                    if chunk[-j] in ' \n。！？、，,.':  # Note: keeping Japanese punctuation
                         chunk = chunk[:-j] + '\n'
                         break
             
@@ -200,14 +240,15 @@ def main():
         
         print(f"📖 Reading '{INPUT_FILE}'...")
         
-        # Read file
+        # Read file (with cleaning applied during reading)
         text = safe_read_file(INPUT_FILE)
         
         if not text.strip():
             print("❌ Error: File is empty")
             return False
         
-        print(f"✓ File read ({len(text):,} chars)")
+        print(f"✓ File read and cleaned ({len(text):,} chars)")
+        print("  (furigana and transcriber notes removed)")
         
         # Split into paragraphs
         print("🔪 Splitting into paragraphs...")
