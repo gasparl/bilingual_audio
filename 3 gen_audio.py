@@ -7,6 +7,7 @@ import sys
 import random
 import datetime
 import wave
+from pydub import AudioSegment
 from typing import Dict, List, Optional, Tuple
 
 # ---------- CONFIG ----------
@@ -16,7 +17,7 @@ LANG_CODE_JA = "ja-JP"
 LANG_CODE_EN = "en-US"
 
 # Retry behavior (minimal, robust)
-MAX_RETRIES = 4
+MAX_RETRIES = 5
 RETRY_BASE_SLEEP = 0.7      # seconds
 RETRY_JITTER = 0.4          # seconds
 MIN_WAV_BYTES = 120         # quick sanity threshold
@@ -45,6 +46,22 @@ def clean_text(text: str) -> str:
 
 def file_has_audio(p: pathlib.Path) -> bool:
     return p.exists() and p.is_file() and p.stat().st_size > MIN_WAV_BYTES
+
+# ---------- WAV TO MP3 CONVERSION ----------
+def convert_sentence_wavs_to_mp3(sentence_id: str, audio_dir: pathlib.Path):
+    """Convert all WAV files for a specific sentence to MP3."""
+    
+    # Find all WAV files for this sentence
+    wav_files = list(audio_dir.glob(f"sentence_{sentence_id}_*.wav"))
+    
+    for wav_file in wav_files:
+        try:
+            mp3_file = wav_file.with_suffix('.mp3')
+            audio = AudioSegment.from_wav(str(wav_file))
+            audio.export(str(mp3_file), format="mp3", bitrate="192k")
+            wav_file.unlink(missing_ok=True)
+        except Exception:
+            pass  # Silently fail - keep WAV if conversion fails
 
 # ---------- TTS FUNCTIONS ----------
 def test_voice(voice_name: str, lang_code: str) -> Optional[Dict]:
@@ -353,17 +370,20 @@ def main():
         for temp_file in AUDIO_OUTPUT_DIR.glob(f"*{sid}*temp*.wav"):
             temp_file.unlink(missing_ok=True)
 
-        # Count created files for this sentence
+        # Convert WAV files to MP3 for this sentence
+        convert_sentence_wavs_to_mp3(sid, AUDIO_OUTPUT_DIR)
+
+        # Count created files for this sentence (now counting MP3 files)
         count_files = 0
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.wav").exists():
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.mp3").exists():
             count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.wav").exists():
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.mp3").exists():
             count_files += 1
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.wav").exists():
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.mp3").exists():
             count_files += 1
-        if breakdown_combined_created:
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_4_breakdown_combined.mp3").exists():
             count_files += 1
-        if alternating_created:
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.mp3").exists():
             count_files += 1
 
         if errors:
@@ -377,17 +397,17 @@ def main():
             print(f"✓{count_files}")
 
         # Count as success if we have at least 1,2,3,5
-        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.wav").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.wav").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.wav").exists() and \
-           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.wav").exists():
+        if (AUDIO_OUTPUT_DIR / f"sentence_{sid}_1_sentence_number.mp3").exists() and \
+           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_2_japanese_male.mp3").exists() and \
+           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_3_english_translation.mp3").exists() and \
+           (AUDIO_OUTPUT_DIR / f"sentence_{sid}_5_japanese_alternating.mp3").exists():
             success_count += 1
 
         time.sleep(0.1)
 
     # Final summary
     total_time = time.time() - start_time
-    final_files = list(AUDIO_OUTPUT_DIR.glob("sentence_*.wav"))
+    final_files = list(AUDIO_OUTPUT_DIR.glob("sentence_*.mp3"))
 
     file_counts = {str(i): 0 for i in range(1, 6)}
     for f in final_files:
