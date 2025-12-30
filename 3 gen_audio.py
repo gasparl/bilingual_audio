@@ -18,11 +18,12 @@ LANG_CODE_EN = "en-US"
 
 # Audio processing settings
 PAUSE_IN_BREAKDOWN_MS = 500      # pause between Japanese term and English breakdown in part 4
+PAUSE_BETWEEN_BREAKDOWNS_MS = 800  # Pause between different breakdown pairs (NEW)
 PAUSE_IN_ALTERNATING_MS = 800    # pause between female and male voices in part 5
-PAUSE_END_SILENCE_MS = 800       # Silence appended to end of ALL final segment files (parts 1-5)
+PAUSE_END_SILENCE_MS = 900       # Silence appended to end of ALL final segment files (parts 1-5)
 
 # Japanese speech rates for different segments
-JA_SPEECH_RATE_SENTENCE_NUMBER = 0.95
+JA_SPEECH_RATE_SENTENCE_NUMBER = 1
 JA_SPEECH_RATE_JAPANESE_MALE = 0.75
 JA_SPEECH_RATE_ALTERNATING = 0.90
 
@@ -345,6 +346,9 @@ class SentenceProcessor:
             return None
             
         if not text:
+            # If text is empty and NOT optional, it's an error
+            if not optional:
+                self.errors.append(part_num)
             return None
             
         temp_file = self.audio_dir / f"sentence_{self.sid}_{filename}_temp.wav"
@@ -395,11 +399,12 @@ class SentenceProcessor:
     def process_english_translation(self) -> Optional[Tuple[pathlib.Path, pathlib.Path]]:
         """Process English translation segment."""
         if not self.en_text:
-            self.skipped_parts.append("3")
+            # English translation is REQUIRED, not optional
+            self.errors.append("3")
             return None
             
         temp_file = self.generate_segment(self.en_text, "3_english_translation", 
-                                         "en_male", optional=True,
+                                         "en_male", optional=False,  # Changed from optional=True
                                          add_end_silence=True)
         if temp_file:
             final_file = self.audio_dir / f"sentence_{self.sid}_3_english_translation.wav"
@@ -407,7 +412,7 @@ class SentenceProcessor:
         return None
     
     def process_breakdown(self) -> Optional[pathlib.Path]:
-        """Process breakdown combined segment."""
+        """Process breakdown combined segment with pauses between pairs."""
         final_file = self.audio_dir / f"sentence_{self.sid}_4_breakdown_combined.wav"
         breakdown_pairs = self._collect_breakdown_pairs()
         
@@ -415,43 +420,69 @@ class SentenceProcessor:
             self.skipped_parts.append("4")
             return None
         
-        breakdown_temp_files = []
-        
-        for pair_idx, (part_jp, breakdown_en) in enumerate(breakdown_pairs, 1):
-            # Generate Japanese part WITHOUT end silence (will be added during combining)
-            temp_jp = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_jp_temp.wav"
-            if not generate_audio_retry(part_jp, temp_jp, self.voices["ja_male"], 
-                                       "japanese_male", add_end_silence=False):
-                self.errors.append("4")
-                return None
-            breakdown_temp_files.append(temp_jp)
+        try:
+            combined = None
             
-            # Generate English breakdown WITHOUT end silence
-            temp_en = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_en_temp.wav"
-            if not generate_audio_retry(breakdown_en, temp_en, self.voices["en_male"],
-                                       add_end_silence=False):
-                self.errors.append("4")
-                # Clean up already generated files
-                for temp_file in breakdown_temp_files:
-                    safe_unlink(temp_file)
-                return None
-            breakdown_temp_files.append(temp_en)
-        
-        # Combine with the TOTAL pause specified in PAUSE_IN_BREAKDOWN_MS
-        if AudioCombiner.combine_wav_files(breakdown_temp_files, final_file, 
-                                          pause_ms=PAUSE_IN_BREAKDOWN_MS):
-            # Add end silence to the final combined file
-            if PAUSE_END_SILENCE_MS > 0:
-                add_end_silence_to_wav(final_file)
+            for pair_idx, (part_jp, breakdown_en) in enumerate(breakdown_pairs, 1):
+                # Generate Japanese part WITHOUT end silence
+                temp_jp = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_jp_temp.wav"
+                if not generate_audio_retry(part_jp, temp_jp, self.voices["ja_male"], 
+                                           "japanese_male", add_end_silence=False):
+                    self.errors.append("4")
+                    return None
+                
+                # Generate English breakdown WITHOUT end silence
+                temp_en = self.audio_dir / f"sentence_{self.sid}_4_{pair_idx}_en_temp.wav"
+                if not generate_audio_retry(breakdown_en, temp_en, self.voices["en_male"],
+                                           add_end_silence=False):
+                    self.errors.append("4")
+                    safe_unlink(temp_jp)
+                    return None
+                
+                # Load and normalize audio
+                jp_audio = AudioSegment.from_wav(str(temp_jp))
+                en_audio = AudioSegment.from_wav(str(temp_en))
+                
+                jp_audio = jp_audio.set_frame_rate(FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                jp_audio = jp_audio.set_channels(FALLBACK_TARGET_CHANNELS)
+                jp_audio = jp_audio.set_sample_width(FALLBACK_TARGET_SAMPLE_WIDTH_BYTES)
+                
+                en_audio = en_audio.set_frame_rate(FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                en_audio = en_audio.set_channels(FALLBACK_TARGET_CHANNELS)
+                en_audio = en_audio.set_sample_width(FALLBACK_TARGET_SAMPLE_WIDTH_BYTES)
+                
+                # Combine Japanese + pause + English for this pair
+                pair_combined = jp_audio + AudioSegment.silent(duration=PAUSE_IN_BREAKDOWN_MS,
+                                                                frame_rate=FALLBACK_TARGET_SAMPLE_RATE_HZ) + en_audio
+                
+                # Add pause between breakdown pairs (except after the last one)
+                if combined is None:
+                    combined = pair_combined
+                else:
+                    # Add pause between this pair and previous one
+                    pause_between = AudioSegment.silent(duration=PAUSE_BETWEEN_BREAKDOWNS_MS,
+                                                         frame_rate=FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                    combined = combined + pause_between + pair_combined
+                
+                # Cleanup temp files
+                safe_unlink(temp_jp)
+                safe_unlink(temp_en)
             
-            for temp_file in breakdown_temp_files:
-                safe_unlink(temp_file)
-            return final_file
-        else:
+            if combined:
+                # Add end silence to the final combined file
+                if PAUSE_END_SILENCE_MS > 0:
+                    end_silence = AudioSegment.silent(duration=PAUSE_END_SILENCE_MS,
+                                                       frame_rate=FALLBACK_TARGET_SAMPLE_RATE_HZ)
+                    combined = combined + end_silence
+                
+                # Export final file
+                combined.export(str(final_file), format="wav")
+                return final_file
+        
+        except Exception:
             self.errors.append("4")
-            for temp_file in breakdown_temp_files:
-                safe_unlink(temp_file)
-            return None
+        
+        return None
     
     def process_alternating(self) -> Optional[pathlib.Path]:
         """Process Japanese alternating segment."""
@@ -461,7 +492,7 @@ class SentenceProcessor:
             self.skipped_parts.append("5")
             return None
         
-        # Generate female version WITHOUT end silence (will be added during combining)
+        # Generate female version WITHOUT end silence
         temp5a = self.audio_dir / f"sentence_{self.sid}_5a_temp.wav"
         if not generate_audio_retry(self.jp_text, temp5a, self.voices["ja_female"], 
                                    "alternating", add_end_silence=False):
@@ -532,7 +563,7 @@ def sentence_has_required_files(sentence_id: str, audio_dir: pathlib.Path) -> bo
 
 def main():
     print("=" * 60)
-    print("Japanese Audio Generator (Corrected)")
+    print("Japanese Audio Generator (Final)")
     print("=" * 60)
 
     if not pathlib.Path(BAL4WEB).exists():
@@ -588,6 +619,7 @@ def main():
     print(f"    Alternating: {JA_SPEECH_RATE_ALTERNATING}")
     print(f"  Pauses:")
     print(f"    Breakdown (Part 4): {PAUSE_IN_BREAKDOWN_MS}ms TOTAL between components")
+    print(f"    Between breakdown pairs: {PAUSE_BETWEEN_BREAKDOWNS_MS}ms")
     print(f"    Alternating (Part 5): {PAUSE_IN_ALTERNATING_MS}ms TOTAL between voices")
     print(f"    End silence on ALL parts (1-5): {PAUSE_END_SILENCE_MS}ms")
     print("\nStarting generation...")
@@ -626,7 +658,7 @@ def main():
             if result := processor_func():
                 segments_to_rename.append(result)
         
-        # Part 4 (breakdown) - components without end silence, final file gets end silence
+        # Part 4 (breakdown) - with pauses between pairs
         if breakdown_file := processor.process_breakdown():
             # File already has final name with end silence
             pass
@@ -662,7 +694,7 @@ def main():
         
         status_parts = []
         if errors_sorted:
-            status_parts.append(f"✗✗✗{','.join(errors_sorted)}")
+            status_parts.append(f"✗{','.join(errors_sorted)}")
         if skips_sorted:
             status_parts.append(f"-{','.join(skips_sorted)}")
         
