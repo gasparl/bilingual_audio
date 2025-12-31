@@ -50,11 +50,14 @@ BASE_DIR = pathlib.Path(__file__).resolve().parent
 AUDIO_OUTPUT_DIR = BASE_DIR / "audio_sentences"
 INPUT_JSON_PATH = BASE_DIR / INPUT_JSON
 
-
 def clean_text(text: str) -> str:
     """Clean text for TTS."""
-    return re.sub(r"\s+", " ", re.sub(r"\n+", " ", text)).strip() if text else ""
-
+    if not text:
+        return ""
+    text = text.replace('"', ',')
+    text = re.sub(r"\n+", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 def file_has_audio(p: pathlib.Path) -> bool:
     return p.exists() and p.is_file() and p.stat().st_size > MIN_WAV_BYTES
