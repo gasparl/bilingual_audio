@@ -12,15 +12,15 @@ from typing import Dict, List, Optional, Tuple
 
 # ---------- CONFIG ----------
 BAL4WEB = r"C:\Program Files (x86)\Balabolka\bal4web\bal4web.exe"
-INPUT_JSON = "translated_output.json"
+INPUT_JSON = "translated_output_part.json"
 LANG_CODE_JA = "ja-JP"
 LANG_CODE_EN = "en-US"
 
 # Audio processing settings
 PAUSE_IN_BREAKDOWN_MS = 500      # pause between Japanese term and English breakdown in part 4
-PAUSE_BETWEEN_BREAKDOWNS_MS = 800  # Pause between different breakdown pairs (NEW)
-PAUSE_IN_ALTERNATING_MS = 800    # pause between female and male voices in part 5
-PAUSE_END_SILENCE_MS = 900       # Silence appended to end of ALL final segment files (parts 1-5)
+PAUSE_BETWEEN_BREAKDOWNS_MS = 800  # Pause between different breakdown pairs
+PAUSE_IN_ALTERNATING_MS = 800    # pause between female and male voices in part 6
+PAUSE_END_SILENCE_MS = 900       # Silence appended to end of ALL final segment files (parts 1-6)
 
 # Japanese speech rates for different segments
 JA_SPEECH_RATE_SENTENCE_NUMBER = 1
@@ -324,9 +324,11 @@ class SentenceProcessor:
         
         self.jp_text = clean_text(row.get("japanese", ""))
         self.en_text = clean_text(row.get("english", ""))
+        self.en_literal = clean_text(row.get("english_literal", ""))
         
         self.errors = []
         self.skipped_parts = []
+        self.created_parts = []  # Track which parts were successfully created
     
     def _extract_part_number(self, filename: str) -> str:
         """Extract part number from filename like '1_sentence_number' or '3_english_translation'."""
@@ -404,7 +406,7 @@ class SentenceProcessor:
             return None
             
         temp_file = self.generate_segment(self.en_text, "3_english_translation", 
-                                         "en_male", optional=False,  # Changed from optional=True
+                                         "en_male", optional=False,
                                          add_end_silence=True)
         if temp_file:
             final_file = self.audio_dir / f"sentence_{self.sid}_3_english_translation.wav"
@@ -477,50 +479,67 @@ class SentenceProcessor:
                 
                 # Export final file
                 combined.export(str(final_file), format="wav")
-                return final_file
+                if file_has_audio(final_file):
+                    self.created_parts.append("4")  # Track that part 4 was created
+                    return final_file
         
         except Exception:
             self.errors.append("4")
         
         return None
     
+    def process_english_literal(self) -> Optional[Tuple[pathlib.Path, pathlib.Path]]:
+        """Process English literal translation segment."""
+        # Only create english_literal if part 4 (breakdown) was successfully created
+        if not self.en_literal or "4" not in self.created_parts:
+            self.skipped_parts.append("5")
+            return None
+            
+        temp_file = self.generate_segment(self.en_literal, "5_english_literal", 
+                                         "en_male", optional=True,
+                                         add_end_silence=True)
+        if temp_file:
+            final_file = self.audio_dir / f"sentence_{self.sid}_5_english_literal.wav"
+            return (temp_file, final_file)
+        return None
+    
     def process_alternating(self) -> Optional[pathlib.Path]:
         """Process Japanese alternating segment."""
-        final_file = self.audio_dir / f"sentence_{self.sid}_5_japanese_alternating.wav"
+        final_file = self.audio_dir / f"sentence_{self.sid}_6_japanese_alternating.wav"
         
         if not self.jp_text:
-            self.skipped_parts.append("5")
+            self.skipped_parts.append("6")
             return None
         
         # Generate female version WITHOUT end silence
-        temp5a = self.audio_dir / f"sentence_{self.sid}_5a_temp.wav"
-        if not generate_audio_retry(self.jp_text, temp5a, self.voices["ja_female"], 
+        temp6a = self.audio_dir / f"sentence_{self.sid}_6a_temp.wav"
+        if not generate_audio_retry(self.jp_text, temp6a, self.voices["ja_female"], 
                                    "alternating", add_end_silence=False):
-            self.errors.append("5")
+            self.errors.append("6")
             return None
         
         # Generate male version WITHOUT end silence (fresh, with alternating speed)
-        temp5b = self.audio_dir / f"sentence_{self.sid}_5b_temp.wav"
-        if not generate_audio_retry(self.jp_text, temp5b, self.voices["ja_male"], 
+        temp6b = self.audio_dir / f"sentence_{self.sid}_6b_temp.wav"
+        if not generate_audio_retry(self.jp_text, temp6b, self.voices["ja_male"], 
                                    "alternating", add_end_silence=False):
-            self.errors.append("5")
-            safe_unlink(temp5a)
+            self.errors.append("6")
+            safe_unlink(temp6a)
             return None
         
         # Combine with the TOTAL pause specified in PAUSE_IN_ALTERNATING_MS
-        if AudioCombiner.combine_wav_files([temp5a, temp5b], final_file, 
+        if AudioCombiner.combine_wav_files([temp6a, temp6b], final_file, 
                                           pause_ms=PAUSE_IN_ALTERNATING_MS):
             # Add end silence to the final combined file
             if PAUSE_END_SILENCE_MS > 0:
                 add_end_silence_to_wav(final_file)
             
-            safe_unlink(temp5a)
-            safe_unlink(temp5b)
+            safe_unlink(temp6a)
+            safe_unlink(temp6b)
             return final_file
         else:
-            self.errors.append("5")
-            safe_unlink(temp5a)
-            safe_unlink(temp5b)
+            self.errors.append("6")
+            safe_unlink(temp6a)
+            safe_unlink(temp6b)
             return None
     
     def _collect_breakdown_pairs(self) -> List[Tuple[str, str]]:
@@ -556,7 +575,7 @@ def sentence_has_required_files(sentence_id: str, audio_dir: pathlib.Path) -> bo
         f"sentence_{sentence_id}_1_sentence_number.mp3",
         f"sentence_{sentence_id}_2_japanese_male.mp3",
         f"sentence_{sentence_id}_3_english_translation.mp3",
-        f"sentence_{sentence_id}_5_japanese_alternating.mp3"
+        f"sentence_{sentence_id}_6_japanese_alternating.mp3"
     ]
     return all((audio_dir / pattern).exists() for pattern in required_patterns)
 
@@ -618,10 +637,10 @@ def main():
     print(f"    Japanese male: {JA_SPEECH_RATE_JAPANESE_MALE}")
     print(f"    Alternating: {JA_SPEECH_RATE_ALTERNATING}")
     print(f"  Pauses:")
-    print(f"    Breakdown (Part 4): {PAUSE_IN_BREAKDOWN_MS}ms TOTAL between components")
+    print(f"    Breakdown (Part 4): {PAUSE_IN_BREAKDOWN_MS}ms between components")
     print(f"    Between breakdown pairs: {PAUSE_BETWEEN_BREAKDOWNS_MS}ms")
-    print(f"    Alternating (Part 5): {PAUSE_IN_ALTERNATING_MS}ms TOTAL between voices")
-    print(f"    End silence on ALL parts (1-5): {PAUSE_END_SILENCE_MS}ms")
+    print(f"    Alternating (Part 6): {PAUSE_IN_ALTERNATING_MS}ms between voices")
+    print(f"    End silence on ALL parts (1-6): {PAUSE_END_SILENCE_MS}ms")
     print("\nStarting generation...")
 
     start_time = time.time()
@@ -648,7 +667,7 @@ def main():
         # Process sentence
         processor = SentenceProcessor(sid, row, voices, AUDIO_OUTPUT_DIR)
         
-        # Generate all segments
+        # Generate all segments in the correct order
         segments_to_rename = []
         
         # Parts 1-3 (with end silence generated directly)
@@ -659,11 +678,16 @@ def main():
                 segments_to_rename.append(result)
         
         # Part 4 (breakdown) - with pauses between pairs
+        # Must be called BEFORE process_english_literal() so created_parts is updated
         if breakdown_file := processor.process_breakdown():
             # File already has final name with end silence
             pass
         
-        # Part 5 (alternating) - components without end silence, final file gets end silence
+        # Part 5 (english_literal) - only if part 4 was created
+        if result := processor.process_english_literal():
+            segments_to_rename.append(result)
+        
+        # Part 6 (alternating) - components without end silence, final file gets end silence
         if alternating_file := processor.process_alternating():
             # File already has final name with end silence
             pass
@@ -694,9 +718,9 @@ def main():
         
         status_parts = []
         if errors_sorted:
-            status_parts.append(f"✗{','.join(errors_sorted)}")
+            status_parts.append(f"ERROR: {','.join(errors_sorted)}")
         if skips_sorted:
-            status_parts.append(f"-{','.join(skips_sorted)}")
+            status_parts.append(f"[o: {','.join(skips_sorted)}]")
         
         print(f"✓{count_files} " + " ".join(status_parts) if status_parts else f"✓{count_files}")
 

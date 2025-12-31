@@ -2,7 +2,7 @@
 """
 DeepSeek Japanese-to-English Translator
 Batch-based processing with progress saving
-Enhanced breakdown structure with up to 3 expressions
+Enhanced breakdown structure with up to 3 expressions + literal translation
 """
 
 import json
@@ -26,7 +26,7 @@ DEFAULT_API_BASE = "https://api.deepseek.com/v1/chat/completions"
 
 # Rate limiting
 BATCH_DELAY = 1.0
-MAX_RETRIES = 2  # One initial attempt + one retry
+MAX_RETRIES = 5  # One initial attempt + one retry
 # =========================================================
 
 
@@ -97,38 +97,194 @@ def read_batches() -> List[str]:
         return []
 
 
-def split_japanese_sentences(text: str) -> List[Tuple[int, str]]:
+def split_japanese_sentences(
+    text: str,
+    aggressive: bool = True,
+    max_clause_length: int = 120
+) -> List[Tuple[int, str]]:
     """
-    Split Japanese text into sentences with indices.
-    Improved to handle Japanese quote marks properly.
-    Returns list of (index, sentence) tuples.
+    Split Japanese text into sentences with intelligent hierarchical splitting.
+
+    Args:
+        text: Japanese text to split
+        aggressive: If True, splits at more boundaries for better translation
+        max_clause_length: Maximum characters before forcing split at clause boundary
+
+    Returns:
+        List of (sentence_number, sentence) tuples (1-based numbering)
     """
     if not text or not text.strip():
         return []
-    
+
+    # 1. Split into paragraphs (one or more newlines with optional spaces)
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+
+    all_sentences: List[str] = []
+    for paragraph in paragraphs:
+        all_sentences.extend(_split_paragraph(paragraph, aggressive, max_clause_length))
+
+    # Number sentences starting from 1
+    return [(i + 1, sent.strip()) for i, sent in enumerate(all_sentences) if sent.strip()]
+
+
+def _split_paragraph(paragraph: str, aggressive: bool, max_clause_length: int) -> List[str]:
+    """Split a single paragraph into sentences."""
     sentences: List[str] = []
     current = ""
-    quote_depth = 0  # Track nested quotes
-    
-    for char in text:
+
+    # Track nesting levels
+    quote_depth = 0
+    paren_depth = 0
+    bracket_depth = 0
+
+    i = 0
+    while i < len(paragraph):
+        char = paragraph[i]
         current += char
-        
-        # Track quote nesting
-        if char == '「' or char == '『':
+
+        # Update nesting levels
+        if char == "「" or char == "『":
             quote_depth += 1
-        elif char == '」' or char == '』':
-            quote_depth -= 1
-        
-        # Only split at sentence boundaries when not inside quotes
-        if char in '。！？' and len(current) > 1 and quote_depth == 0:
+        elif char == "」" or char == "』":
+            quote_depth = max(0, quote_depth - 1)
+        elif char in "（(":
+            paren_depth += 1
+        elif char in "）)":
+            paren_depth = max(0, paren_depth - 1)
+        elif char in "【［〔｛[{":
+            bracket_depth += 1
+        elif char in "】］〕｝]}":
+            bracket_depth = max(0, bracket_depth - 1)
+
+        inside_nested = quote_depth > 0 or paren_depth > 0 or bracket_depth > 0
+
+        # 1. Split at sentence enders (。, ！, ？)
+        if char in "。！？" and not inside_nested:
+            # Handle consecutive enders (！！, ！？, etc.)
+            while i + 1 < len(paragraph) and paragraph[i + 1] in "。！？":
+                i += 1
+                current += paragraph[i]
+
             sentences.append(current.strip())
             current = ""
-    
+            i += 1
+            continue
+
+        # 2. Split at ellipsis (especially multiple ...)
+        if char == "…" and not inside_nested:
+            # Count consecutive ellipsis
+            ellipsis_count = 1
+            while i + 1 < len(paragraph) and paragraph[i + 1] == "…":
+                i += 1
+                current += paragraph[i]
+                ellipsis_count += 1
+
+            # Check if we should split
+            should_split = False
+
+            # Look for conjunctions after ellipsis
+            next_text = paragraph[i + 1 : i + 10]
+            conjunctions = ["また", "そして", "しかし", "だが", "それで", "だから"]
+            if any(next_text.startswith(c) for c in conjunctions):
+                should_split = True
+
+
+            # Split at multiple ellipsis in aggressive mode
+            if aggressive and ellipsis_count >= 2:
+                should_split = True
+            # Split at single ellipsis if we have enough content
+            elif aggressive and ellipsis_count == 1 and len(current.strip()) > 20:
+                should_split = True
+
+            if should_split:
+                sentences.append(current.strip())
+                current = ""
+                i += 1  # Move past the last ellipsis character we just processed
+                continue  # Skip the i += 1 at end of loop
+
+        # 3. Split at clause boundaries in long sentences (aggressive mode)
+        if aggressive and char == "、" and not inside_nested and len(current) > max_clause_length:
+            # Common clause markers
+            markers = ["し、", "が、", "ので、", "から、", "けれど、", "ながら、", "たり、"]
+
+            for marker in markers:
+                if current.endswith(marker):
+                    # Ensure we have meaningful content before marker
+                    content_before = current[:-len(marker)]
+                    if len(content_before.strip()) > 15:
+                        sentences.append(current.strip())
+                        current = ""
+                    break
+
+        # 4. Emergency split for very long segments
+        if len(current) > 250 and not inside_nested:
+            # Look back for a good split point
+            split_pos = -1
+            # Try ellipsis first, then comma
+            for lookback in range(min(150, len(current)), 0, -1):
+                pos = len(current) - lookback
+                if current[pos] == "…" and pos > 50:
+                    split_pos = pos + 1
+                    break
+            
+            if split_pos == -1:  # No ellipsis found
+                for lookback in range(min(150, len(current)), 0, -1):
+                    pos = len(current) - lookback
+                    if current[pos] == "、" and pos > 50:
+                        split_pos = pos + 1
+                        break
+
+            if split_pos != -1:
+                before = current[:split_pos].strip()
+                after = current[split_pos:].strip()
+                if before and len(before) > 30:
+                    sentences.append(before)
+                    current = after
+
+        i += 1
+
+    # Add remaining text
     if current.strip():
         sentences.append(current.strip())
+
+    # Merge very short fragments
+    if sentences:
+        processed: List[str] = []
+        i = 0
+        while i < len(sentences):
+            sent = sentences[i].strip()
+            if not sent:
+                i += 1
+                continue
     
-    # Number each sentence
-    return [(i + 1, s) for i, s in enumerate(sentences) if s]
+            is_fragment = (
+                len(sent) < 15 and
+                not sent.endswith("…") and
+                not sent.endswith(("。", "！", "？"))
+            )
+    
+            if is_fragment:
+                prev_ends_sentence = bool(processed) and processed[-1].endswith(("。", "！", "？"))
+                prev_ends_pause = bool(processed) and processed[-1].endswith("…")
+    
+                # Prefer merging backward only if it won't create "。だから" style output
+                if processed and not prev_ends_sentence and not prev_ends_pause and (len(processed[-1]) + len(sent) < 150):
+                    processed[-1] = processed[-1] + sent
+                # Otherwise merge forward into the next segment if possible
+                elif i + 1 < len(sentences):
+                    sentences[i + 1] = (sent + sentences[i + 1].lstrip())
+                else:
+                    processed.append(sent)
+    
+                i += 1
+                continue
+    
+            processed.append(sent)
+            i += 1
+    
+        return processed
+
+    return sentences
 
 
 def clean_english_text(text: str, is_breakdown: bool = False) -> str:
@@ -150,11 +306,9 @@ def clean_english_text(text: str, is_breakdown: bool = False) -> str:
         '「': '"', '」': '"',   # Japanese quotes to ASCII quotes
         '『': '"', '』': '"',   # Japanese double quotes
         '、': ',', '。': '.',   # Japanese punctuation
-        '・': '·', '〜': '~',   # Other Japanese chars
+        '・': '-', '〜': '~',   # Other Japanese chars
         'ー': '-', '…': '...',  # More replacements
         '―': '-', '‥': '..',
-        '「': '"', '」': '"',   # Curly quotes to straight quotes
-        '「': "'", '」': "'",   # Curly apostrophes
         '—': '-', '–': '-',     # Various dashes to hyphen
     }
     
@@ -207,7 +361,7 @@ class BatchTranslator:
             "model": "deepseek-chat",
             "messages": messages,
             "temperature": 0.1,
-            "max_tokens": 4000,
+            "max_tokens": 8000,
             "stream": False
         }
         
@@ -256,31 +410,33 @@ class BatchTranslator:
         # Create numbered sentences for the prompt
         numbered_sentences = "\n".join([f"{num}. {text}" for num, text in sentences])
         
-        # Optimized prompt with up to 3 breakdown expressions
+        # Optimized prompt with up to 3 breakdown expressions + literal translation
         system_prompt = """You are an expert Japanese-to-English translator.
         
         TASK:
-        Translate each Japanese sentence to English, maintaining context across sentences.
-        For each sentence, provide:
-        1. A faithful English translation
-        2. Up to THREE (0-3) grammar points, advanced expressions, or obscure cultural references worth explaining:
-           - Identify the specific Japanese word/phrase for each
-           - Provide a concise explanation for each (max 3-4 sentences per breakdown)
+        Translate each Japanese sentence to English, maintaining context across sentences. For each sentence, provide:
+        1) A faithful English translation, as close to the original meaning as possible.
+        2) An even closer, learning-oriented English translation that roughly follows Japanese structure and word order as far as it is sensible.
+           - This should still be easily comprehensible in English. 
+           - In case of long/complex sentences, this is less important, please prioritize readability and natural flow in English.
+           - This can be skipped if the sentence is very short, such as a single word.
+        3) Up to THREE (0-3) notable items worth explaining (grammar points, advanced expressions, or cultural references):
+           - Identify the specific Japanese word/phrase for each.
+           - Give a concise explanation (max 3-4 sentences each).
         
         REQUIREMENTS:
-        * Provide translations as close and faithful as possible to the original.
-        * If context is missing (e.g., who is the subject), keep it neutral rather than guessing.
-        * Provide breakdowns for only the most important/significant expressions (max 3 per sentence).
+        * If context is missing (e.g., unclear subject), keep it neutral rather than guessing.
         * For very simple everyday sentences, leave all breakdown fields empty.
-        * English output must NOT contain any Japanese characters.
-        * In breakdowns, use romanization only (e.g., "hara-guroi" not "腹黒い").
         * Use only ASCII characters in English output (no special Unicode quotes or punctuation).
+        * In breakdown explanations, use romanization only (e.g., "hara-guroi" not "腹黒い").
+        * In part_to_breakdown fields, keep the original Japanese characters.
         
         OUTPUT FORMAT:
-        Return a JSON array where each object has:
+        Return a JSON array. Each object must be:
         {
           "sentence_number": (number from input),
           "english": "English translation",
+          "english_literal": "English translation closer to Japanese word order",
           "part_to_breakdown_1": "Japanese word/phrase being explained OR empty string",
           "breakdown_1": "Brief explanation OR empty string",
           "part_to_breakdown_2": "Japanese word/phrase being explained OR empty string",
@@ -290,12 +446,8 @@ class BatchTranslator:
         }
         
         IMPORTANT:
-        * Fill breakdowns sequentially (1, then 2, then 3). Don't skip numbers.
-        * If a sentence has only 2 breakdowns, leave fields 3 empty.
-        * If a sentence has only 1 breakdown, leave fields 2 and 3 empty.
-        * In English translation field: Use only ASCII characters (A-Z, a-z, 0-9, and common punctuation).
-        * In part_to_breakdown fields: Keep the actual Japanese characters (for reference).
-        * In breakdown fields: Use only ASCII characters with romanization. Do NOT use double quotes in breakdowns.
+        * Fill breakdowns sequentially (1, then 2, then 3). Do not skip numbers.
+        * If fewer than 3 breakdowns apply, leave the remaining part_to_breakdown_* and breakdown_* fields empty.
         
         EXAMPLES:
         Example 1 (simple - no breakdowns):
@@ -303,6 +455,7 @@ class BatchTranslator:
         Output: {
           "sentence_number": 1,
           "english": "The weather is nice today, isn't it?",
+          "english_literal": "",
           "part_to_breakdown_1": "",
           "breakdown_1": "",
           "part_to_breakdown_2": "",
@@ -316,6 +469,7 @@ class BatchTranslator:
         Output: {
           "sentence_number": 2,
           "english": "He has a scheming personality.",
+          "english_literal": "He has a black-bellied personality.",
           "part_to_breakdown_1": "腹黒い",
           "breakdown_1": "The term (literally 'belly-black') describes someone who is deceitful or manipulative.",
           "part_to_breakdown_2": "",
@@ -328,7 +482,8 @@ class BatchTranslator:
         Input: "明日までにレポートを出さなくてはならないが、気が重い。"
         Output: {
           "sentence_number": 3,
-          "english": "I have to submit the report by tomorrow, but I'm feeling reluctant.",
+          "english": "By tomorrow, I have to submit the report, but I'm feeling reluctant.",
+          "english_literal": "By tomorrow, the report I must submit, but my spirit is heavy.",
           "part_to_breakdown_1": "出さなくてはならない",
           "breakdown_1": "This is the '-nakute wa naranai' obligation pattern meaning 'must/have to.' It's generally more formal/written than the conversational '-nakute wa ikenai' variant.",
           "part_to_breakdown_2": "気が重い",
@@ -341,25 +496,27 @@ class BatchTranslator:
         Input: "その提案は画竜点睛を欠くものだったが、焼け石に水でも試す価値はある。"
         Output: {
           "sentence_number": 4,
-          "english": "The proposal was missing the finishing touch, but it's worth trying even if it's like pouring water on a hot stone.",
+          "english": "The proposal was missing the finishing touch, but even if it's like pouring water on a hot stone, it's worth trying.",
+          "english_literal": "That proposal was a thing lacking the dotting-the-dragon's-eyes, but even if it is water onto a hot stone, it's worth trying.",
           "part_to_breakdown_1": "画竜点睛",
           "breakdown_1": "Literally 'dotting the eyes of a painted dragon'. Ga means draw or paint. Ryuu means dragon. Ten means dot. Sei means the pupil of the eye. Meaning: the final crucial touch that makes the whole thing come alive.",
           "part_to_breakdown_2": "を欠く",
-          "breakdown_2": "'wo kaku' - to lack/be missing. Often used with abstract nouns to indicate something is absent.",
+          "breakdown_2": "To lack/be missing. Often used with abstract nouns to indicate something is absent.",
           "part_to_breakdown_3": "焼け石に水",
-          "breakdown_3": "'Yakeishi ni mizu' - pouring water on a hot stone. Means a futile effort that has little to no effect."
+          "breakdown_3": "Pouring water on a hot stone. Means a futile effort that has little to no effect."
         }
         
         Remember: Maintain consistency and context across all sentences in the batch."""
+
         
         user_prompt = f"""Translate these Japanese sentences to English.
 
-JAPANESE SENTENCES:
-{numbered_sentences}
-
-Provide faithful translations that work well together as a coherent passage.
-Return a JSON array with translations for each numbered sentence.
-Follow the exact output format with sentence_number, english, and up to 3 breakdown pairs (part_to_breakdown_1-3, breakdown_1-3)."""
+        JAPANESE SENTENCES:
+        {numbered_sentences}
+        
+        Provide faithful translations that work well together as a coherent passage.
+        Return a JSON array with translations for each numbered sentence.
+        Follow the exact output format with sentence_number, english, english_literal, and up to 3 breakdown pairs (part_to_breakdown_1-3, breakdown_1-3)."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -404,6 +561,7 @@ Follow the exact output format with sentence_number, english, and up to 3 breakd
                 
                 if translation and isinstance(translation, dict):
                     english = clean_english_text(translation.get("english", ""), is_breakdown=False)
+                    english_literal = clean_english_text(translation.get("english_literal", ""), is_breakdown=False)
                     
                     # Get up to 3 breakdown pairs
                     breakdown_data = {}
@@ -418,36 +576,45 @@ Follow the exact output format with sentence_number, english, and up to 3 breakd
                         # Remove all double quotes from breakdowns
                         breakdown = clean_english_text(translation.get(breakdown_key, ""), is_breakdown=True)
                         
-                        # If breakdown exists but part is empty, mark as unspecified
+                        # If breakdown exists but part is empty, log warning and keep empty
                         if breakdown and not part:
-                            part = "[unspecified]"
+                            print(f"    ⚠️ Sentence {orig_num}: Breakdown {i} has no part_to_breakdown")
+                            # Keep part empty - TTS will skip empty strings
                         
                         breakdown_data[part_key] = part  # Keep Japanese characters here
                         breakdown_data[breakdown_key] = breakdown  # Cleaned of Japanese chars
                     
-                    # Validate English is not empty
-                    if not english or len(english) < 3:
-                        english = f"[Translation: {orig_text[:80]}...]"
+                    # English translation should always exist, but handle edge cases gracefully
+                    if not english or not english.strip():
+                        # If English is empty, use empty string - TTS will skip it
+                        english = ""
+                        print(f"    ⚠️ Sentence {orig_num}: Empty English translation")
+                    
+                    # english_literal can be empty - that's fine
                     
                     results.append({
                         "sentence_number": orig_num,
                         "japanese": orig_text,
                         "english": english,
+                        "english_literal": english_literal,
                         **breakdown_data
                     })
                 else:
-                    # If no translation found, create placeholder with empty breakdown fields
-                    placeholder = {
+                    # If no translation dict found, create minimal entry with empty fields
+                    print(f"    ⚠️ Sentence {orig_num}: No translation dict found")
+                    
+                    results.append({
                         "sentence_number": orig_num,
                         "japanese": orig_text,
-                        "english": f"[Translation not provided: {orig_text[:80]}...]",
-                    }
-                    # Add empty breakdown fields
-                    for i in range(1, 4):
-                        placeholder[f"part_to_breakdown_{i}"] = ""
-                        placeholder[f"breakdown_{i}"] = ""
-                    
-                    results.append(placeholder)
+                        "english": "",  # Empty string, not placeholder
+                        "english_literal": "",  # Empty string
+                        "part_to_breakdown_1": "",
+                        "breakdown_1": "",
+                        "part_to_breakdown_2": "",
+                        "breakdown_2": "",
+                        "part_to_breakdown_3": "",
+                        "breakdown_3": ""
+                    })
             
             print(f" ✓ Success")
             return results
@@ -509,6 +676,7 @@ def process_all_batches(translator: BatchTranslator) -> Dict[str, Dict[str, str]
                 sentence_data = {
                     "japanese": result["japanese"],
                     "english": result["english"],
+                    "english_literal": result["english_literal"],
                     "original_batch_sentence_num": result.get("sentence_number", 0),
                     "batch_number": batch_num
                 }
@@ -605,7 +773,8 @@ def save_final_results(sentences: Dict[str, Dict[str, str]], filename: str = OUT
             "processing_method": "Batch-based translation for context",
             "translation_approach": "Faithful translation, neutral when context missing",
             "breakdown_structure": "Up to 3 breakdown pairs per sentence (part_to_breakdown_1-3, breakdown_1-3)",
-            "character_rule": "No Japanese characters in English output, romanization only in breakdowns, ASCII-only output"
+            "character_rule": "No Japanese characters in English output, romanization only in breakdowns, ASCII-only output",
+            "output_fields": "Includes both natural (english) and literal (english_literal) translations for learning"
         },
         "sentences": sentences
     }
@@ -626,6 +795,7 @@ def main() -> None:
     print("=" * 60)
     print("Japanese to English Translator")
     print("Batch Processing with Enhanced Breakdown Structure (up to 3 expressions)")
+    print("Includes both natural and literal translations for learning")
     print("=" * 60)
     
     # Load configuration
@@ -704,6 +874,7 @@ def main() -> None:
                 print(f"\n{key}. ({count} BREAKDOWN{'S' if count != 1 else ''})")
                 print(f"   Japanese: {s['japanese'][:60]}...")
                 print(f"   English: {s['english'][:60]}...")
+                print(f"   Literal: {s['english_literal'][:60]}...")
                 
                 if count > 0:
                     for i in range(1, count + 1):
