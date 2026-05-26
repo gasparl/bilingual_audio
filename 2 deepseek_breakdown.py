@@ -404,14 +404,12 @@ Translate each English sentence into Japanese, maintaining context across senten
 1) A simple, natural Japanese translation.
    - The Japanese should be deliberately learner-friendly, roughly JLPT N4-N3 when possible.
    - Prefer short, clear sentence structure and common vocabulary.
-   - Do not make the Japanese childish or unnatural.
    - Avoid rare kanji, literary wording, archaic expressions, and overly compressed phrasing.
    - If the English sentence is long or complex, you may split it into two short Japanese sentences.
-   - Preserve the original meaning, tone, and sequence of events.
+   - Preserve the original meaning faithfully.
 2) A closer, learning-oriented English literal translation of your Japanese sentence.
    - This should roughly follow the Japanese structure and word order as far as sensible.
    - It should still be understandable English.
-   - It is NOT an explanation. It is a more literal translation, like a structural gloss.
    - It can be empty if the sentence is very short or if it would not add value.
 3) Up to THREE (0-3) notable Japanese items worth explaining:
    - Identify the specific Japanese word/phrase/grammar point.
@@ -423,7 +421,6 @@ REQUIREMENTS:
 * Use only ASCII characters in English output fields: english_literal and breakdown_*.
 * In breakdown explanations, use romanization only when referring to Japanese pronunciation.
 * In part_to_breakdown fields, keep the original Japanese characters from your translation.
-* Return JSON only. Do not wrap the JSON in Markdown.
 
 OUTPUT FORMAT:
 Return a JSON array. Each object must be:
@@ -438,11 +435,6 @@ Return a JSON array. Each object must be:
   "part_to_breakdown_3": "Japanese word/phrase being explained OR empty string",
   "breakdown_3": "Brief English explanation OR empty string"
 }
-
-IMPORTANT:
-* Fill breakdowns sequentially (1, then 2, then 3). Do not skip numbers.
-* If fewer than 3 breakdowns apply, leave the remaining part_to_breakdown_* and breakdown_* fields empty.
-* Do not include an "english" field in the JSON. The program will preserve the original English sentence itself.
 
 EXAMPLES:
 Example 1 (simple - no breakdowns):
@@ -466,7 +458,7 @@ Output: {
   "japanese": "明日までにレポートを出さなければなりません。",
   "english_literal": "By tomorrow, the report I must submit.",
   "part_to_breakdown_1": "出さなければなりません",
-  "breakdown_1": "This is the nakereba narimasen pattern, meaning must or have to. It is polite and clear for learners.",
+  "breakdown_1": "This is the nakereba naranai obligation pattern, meaning 'must' or 'have to.' Compared with naito ikenai, it sounds more formal and is more common in writing.",
   "part_to_breakdown_2": "",
   "breakdown_2": "",
   "part_to_breakdown_3": "",
@@ -479,10 +471,10 @@ Output: {
   "sentence_number": 3,
   "japanese": "すぐに答えたかったです。でも、いい言葉が見つかりませんでした。",
   "english_literal": "Right away I wanted to answer. But good words were not found.",
-  "part_to_breakdown_1": "見つかりませんでした",
-  "breakdown_1": "The polite past negative form of mitsukaru. It means was not found. It often sounds natural when the thing appears or does not appear on its own.",
-  "part_to_breakdown_2": "",
-  "breakdown_2": "",
+  "part_to_breakdown_1": "答えたかったです",
+  "breakdown_1": "This is the past want-to form of kotaeru: wanted to answer. The ending desu makes the sentence polite.",
+  "part_to_breakdown_2": "見つかりませんでした",
+  "breakdown_2": "Were not found. Mitsukaru is an intransitive verb meaning to be found.",
   "part_to_breakdown_3": "",
   "breakdown_3": ""
 }

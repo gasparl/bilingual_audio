@@ -47,7 +47,7 @@ PAUSE_END_SILENCE_MS = 900           # silence appended to end of final segment 
 # edge-tts speech rates
 # edge-tts uses strings like "+0%", "-10%", "-25%"
 JA_RATE_SENTENCE_NUMBER = "+0%"
-JA_RATE_JAPANESE_MALE = "-25%"
+JA_RATE_JAPANESE_MALE = "-30%"
 JA_RATE_ALTERNATING = "-10%"
 EN_RATE = "+0%"
 
@@ -63,10 +63,10 @@ JAPANESE_VOICES = {
     "female": ["ja-JP-NanamiNeural"],
 }
 ENGLISH_VOICES = [
-    "en-US-GuyNeural",
     "en-US-SteffanNeural",
     "en-US-AndrewNeural",
     "en-US-BrianNeural",
+    "en-US-GuyNeural",
 ]
 
 # ---------- PATHS ----------
